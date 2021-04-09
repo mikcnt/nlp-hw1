@@ -2,3 +2,7 @@ _gitignore
 embeddings
 .virtual_documents
 .ipynb_checkpoints
+logs
+checkpoints
+*.pkl
+*.pth
