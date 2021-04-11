@@ -6,3 +6,4 @@ logs
 checkpoints
 *.pkl
 *.pth
+.vscode
