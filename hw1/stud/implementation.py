@@ -9,7 +9,8 @@ from torch import nn
 import os
 
 def build_model(device: str) -> Model:
-    return StudentModel().to(device)
+    # return StudentModel().to(device)
+    return RandomBaseline()
 
 
 class RandomBaseline(Model):
