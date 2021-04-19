@@ -3,6 +3,15 @@ from torch import nn
 
 from typing import List, Tuple, Optional, Dict, Callable
 
+
+def text_length(sentences: torch.Tensor) -> torch.Tensor:
+    # search first zero
+    lengths = (sentences == 0).int().argmax(axis=1).to("cpu")
+    # length 0 only if sentence has max length
+    # => replace 0 with max length
+    lengths[lengths == 0] = sentences.shape[-1]
+    return lengths
+
 # MLP baseline model
 class MLP(nn.Module):
     def __init__(
@@ -50,6 +59,77 @@ class MLP(nn.Module):
         return out.squeeze(-1)
 
 
+class MLPEmbedding(nn.Module):
+    def __init__(
+        self,
+        vectors_store: List[torch.Tensor],
+        n_features: int,
+        num_layers: int,
+        hidden_dim: int,
+        activation: Callable[[torch.Tensor], torch.Tensor],
+    ) -> None:
+        super().__init__()
+
+        self.embedding = nn.Embedding.from_pretrained(
+            vectors_store,
+            padding_idx=0,
+        )
+
+        linear_features = 2 * n_features
+        self.first_layer = nn.Linear(
+            in_features=linear_features, out_features=hidden_dim
+        )
+
+        self.layers = nn.ModuleList()
+
+        for _ in range(num_layers):
+            self.layers.append(
+                nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
+            )
+
+        self.activation = activation
+        self.dropout = nn.Dropout(0.5)
+
+        self.last_layer = nn.Linear(in_features=hidden_dim, out_features=1)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
+
+        # compute sentences length
+        lengths1 = text_length(sentence1)
+        lengths2 = text_length(sentence2)
+
+        # text embeddings
+        embeddings1 = self.embedding(sentence1)
+        embeddings2 = self.embedding(sentence2)
+        
+
+        mask1 = torch.arange(embeddings1.shape[1], device=embeddings2.device) < lengths1[..., None]
+        embeddings1 = (embeddings1 * mask1.unsqueeze(-1)).sum(1) / lengths1.unsqueeze(-1)
+        
+        mask2 = torch.arange(embeddings2.shape[1], device=embeddings2.device) < lengths2[..., None]
+        embeddings2 = (embeddings2 * mask2.unsqueeze(-1)).sum(1) / lengths2.unsqueeze(-1)
+               
+        sentence_vector = torch.cat((embeddings1, embeddings2), dim=-1)
+        
+        out = self.first_layer(
+            sentence_vector
+        )  # First linear layer, transforms the hidden dimensions from `n_features` (embedding dimension) to `hidden_dim`
+        for layer in self.layers:  # Apply `k` (linear, activation) layer
+            out = layer(out)
+            out = self.activation(out)
+            out = self.dropout(out)
+        out = self.last_layer(
+            out
+        )  # Last linear layer to bring the `hiddem_dim` features to a binary space (`True`/`False`)
+
+        out = self.sigmoid(out)
+        return out.squeeze(-1)
+
+
 # LSTM model
 class LSTMClassifier(nn.Module):
     def __init__(
@@ -73,7 +153,6 @@ class LSTMClassifier(nn.Module):
         # embedding layer
         self.embedding = torch.nn.Embedding.from_pretrained(
             vectors_store,
-            padding_idx=0,
         )
 
         # recurrent layer
@@ -97,7 +176,8 @@ class LSTMClassifier(nn.Module):
         # classification head
         self.lin1 = torch.nn.Linear(linear_features, linear_features)
         self.lin2 = torch.nn.Linear(linear_features, 1)
-
+        self.activation = nn.PReLU()
+        
         self.dropout = nn.Dropout(0.3)
 
         self.sigmoid = nn.Sigmoid()
@@ -107,8 +187,8 @@ class LSTMClassifier(nn.Module):
         sentence2 = batch["sentence2"]
 
         # compute sentences length
-        lengths1 = self._text_length(sentence1)
-        lengths2 = self._text_length(sentence2)
+        lengths1 = text_length(sentence1)
+        lengths2 = text_length(sentence2)
 
         # text embeddings
         embeddings1 = self.embedding(sentence1)
@@ -134,21 +214,14 @@ class LSTMClassifier(nn.Module):
 
         # linear pass
         out = self.lin1(lstm_out)
-        out = torch.relu(out)
+        out = self.activation(out)
+        # out = torch.relu(out)
         out = self.dropout(out)
 
         out = self.lin2(out).squeeze(1)
         out = self.sigmoid(out)
 
         return out
-
-    def _text_length(self, sentences: torch.Tensor) -> torch.Tensor:
-        # search first zero
-        lengths = (sentences == 0).int().argmax(axis=1).to("cpu")
-        # length 0 only if sentence has max length
-        # => replace 0 with max length
-        lengths[lengths == 0] = sentences.shape[-1]
-        return lengths
 
     def _lstm_output(
         self, embeddings: torch.Tensor, lengths: torch.Tensor

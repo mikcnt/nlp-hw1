@@ -4,15 +4,15 @@ import numpy as np
 import torch
 from torch import nn
 
-from utils import embeddings_dictionary, index_dictionary, Checkpoint
+from utils import embeddings_dictionary, index_dictionary, Checkpoint, word_vectors_most_common
 from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
 from datasets.lstm_dataset import IndicesDataset
-from models import MLP, LSTMClassifier
+from models import MLP, MLPEmbedding, LSTMClassifier
 from trainer import fit
 
 # constants
-MODEL_TYPE = "MLP"
+MODEL_TYPE = "LSTM"
 
 if __name__ == "__main__":
     # seeds for reproducibility
@@ -35,7 +35,8 @@ if __name__ == "__main__":
     word_vectors = embeddings_dictionary(
         embedding_path=embedding_path, skip_first=False
     )
-    word_vectors["<unk>"] = torch.rand(300)
+    
+    word_vectors = word_vectors_most_common(train_path, word_vectors, 1)
 
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
@@ -45,17 +46,17 @@ if __name__ == "__main__":
     marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
     # select dataset according to model selection
-    if MODEL_TYPE == "MLP":
-        embedder = WeightedAverageEmbedder(
-            word_vectors=word_vectors, max_weight=1, min_weight=0
-        )
-        train_dataset = EmbeddedDataset(
-            dataset_path=train_path, marker=marker, embedder=embedder, neigh_width=None
-        )
-        val_dataset = EmbeddedDataset(
-            dataset_path=dev_path, marker=marker, embedder=embedder, neigh_width=None
-        )
-    elif MODEL_TYPE == "LSTM":
+    # if MODEL_TYPE == "MLP":
+        # embedder = WeightedAverageEmbedder(
+        #     word_vectors=word_vectors, max_weight=1, min_weight=0
+        # )
+        # train_dataset = EmbeddedDataset(
+        #     dataset_path=train_path, marker=marker, embedder=embedder, neigh_width=None
+        # )
+        # val_dataset = EmbeddedDataset(
+        #     dataset_path=dev_path, marker=marker, embedder=embedder, neigh_width=None
+        # )
+    if MODEL_TYPE == "LSTM" or MODEL_TYPE == "MLP":
         train_dataset = IndicesDataset(
             dataset_path=train_path,
             word_index=word_index,
@@ -83,9 +84,10 @@ if __name__ == "__main__":
 
     # select either MLP or LSTM as model
     if MODEL_TYPE == "MLP":
-        model = MLP(
+        model = MLPEmbedding(
             n_features=300,
-            num_layers=3,
+            vectors_store=vectors_store,
+            num_layers=4,
             hidden_dim=1024,
             activation=nn.functional.relu,
         ).to(device)
@@ -95,7 +97,7 @@ if __name__ == "__main__":
             n_hidden=512,
             num_layers=2,
             bidirectional=True,
-            lstm_dropout=0.3,
+            lstm_dropout=0.5,
             use_lemma_embedding=False,
         ).to(device)
 

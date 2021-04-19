@@ -1,10 +1,13 @@
 import pickle
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
+import jsonlines
 import torch
 from tqdm import tqdm
 
 from typing import Dict, Tuple, List
+
+from datasets.data_processing import preprocess
 
 # save/load pickle
 def save_pickle(data: dict, path: str) -> None:
@@ -112,3 +115,21 @@ def index_dictionary(
     )  # default dict returns 1 (unk token) when unknown word
     vectors_store = torch.stack(vectors_store)
     return word_index, vectors_store
+
+def word_vectors_most_common(dataset_path, word_vectors, threshold=1):
+    vocabulary_count = Counter()
+    with jsonlines.open(dataset_path, "r") as f:
+        for line in f.iter():
+            s1 = line["sentence1"]
+            s2 = line["sentence2"]
+
+            # preprocessing
+            s1 = preprocess(s1)
+            s2 = preprocess(s2)
+            
+            t1 = s1.split()
+            t2 = s2.split()
+            
+            vocabulary_count.update(t1 + t2)
+
+    return {word: vector for word, vector in word_vectors.items() if vocabulary_count[word] >= threshold}

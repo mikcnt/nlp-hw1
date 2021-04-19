@@ -8,6 +8,7 @@ from .data_processing import (
     preprocess,
     custom_tokenizer,
     get_neighbourhood,
+    tokens2indices,
 )
 from .manual_embedding import TokensEmbedder
 
