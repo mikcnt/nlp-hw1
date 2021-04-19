@@ -1,40 +1,30 @@
-from typing import Dict
+
 import pickle
 import os
+from collections import defaultdict
+import torch
 from tqdm import tqdm
 
-import torch
-from torch import nn
+from typing import Dict, Tuple, List
 
-# Saving data with pickle
-def save_pickle(data: Dict, path: str) -> None:
+# save/load pickle
+def save_pickle(data: dict, path: str) -> None:
     with open(path, 'wb') as f:
         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-def load_pickle(path: str) -> Dict:
+def load_pickle(path: str) -> dict:
     with open(path, 'rb') as f:
         return pickle.load(f)
 
-# To create embedding dictionary from `txt` file (e.g., GloVe)
-def create_embedding_dictionary(path: str) -> Dict[str, torch.Tensor]:
-    word_vectors = dict()
-    with open(path) as f:
-        for i, line in tqdm(enumerate(f)):
-
-            word, *vector = line.strip().split(' ')
-            vector = torch.tensor([float(c) for c in vector])
-
-            word_vectors[word] = vector
-    return word_vectors
-
-# To save / load checkpoints
+# save/load models checkpoints
+# Saving / loading models
 class Checkpoint:
-    def __init__(self, path, resume=False):
+    def __init__(self, path: str, resume=False):
         self.path = path
         os.makedirs(path, exist_ok=True)
         self.resume = resume
 
-    def load(self, model: nn.Module, optimizer, id_path=""):
+    def load(self, model, optimizer, id_path=""):
         if (not self.resume) and id_path == "":
             raise RuntimeError()
         if self.resume:
@@ -74,3 +64,44 @@ class Checkpoint:
             raise RuntimeError("Checkpoint empty.")
         model.load_state_dict(self.checkpoint["model_state_dict"])
         return model
+
+# load pretrained embedding dictionaries
+def embeddings_dictionary(embedding_path: str, skip_first=False) -> Dict[str, torch.Tensor]:
+    word_vectors = dict()
+    num_lines = sum(1 for line in open(embedding_path,'r'))
+    with open(embedding_path) as f:
+        for i, line in tqdm(enumerate(f), total=num_lines):
+            
+            if i == 0 and skip_first:
+                continue
+            # for tests
+            # if i == 10000:
+            #     break
+            word, *vector = line.strip().split(' ')
+            vector = torch.tensor([float(c) for c in vector])
+
+            word_vectors[word] = vector
+    return word_vectors
+
+
+def index_dictionary(word_vectors: Dict[str, torch.Tensor]) -> Tuple[Dict[str, int], List[torch.Tensor]]:
+    word_index = dict()
+    vectors_store = []
+
+    # pad token, index = 0
+    vectors_store.append(torch.rand(300))
+
+    # unk token, index = 1
+    vectors_store.append(torch.rand(300))
+
+    # save index for each word
+    for word, vector in word_vectors.items():
+        # skip unk token if present
+        if word == '<unk>':
+            continue
+        word_index[word] = len(vectors_store)
+        vectors_store.append(vector)
+
+    word_index = defaultdict(lambda: 1, word_index)  # default dict returns 1 (unk token) when unknown word
+    vectors_store = torch.stack(vectors_store)
+    return word_index, vectors_store
