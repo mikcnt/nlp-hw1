@@ -13,7 +13,7 @@ from .manual_embedding import TokensEmbedder
 
 class EmbeddedDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_path: str, marker: str, embedder: TokensEmbedder, neigh_width: Optional[int] = None) -> None:
-        self.data = []
+        self.data = {}
         self.marker = marker
         self.embedder = embedder
         self.neigh_width = neigh_width
@@ -23,7 +23,7 @@ class EmbeddedDataset(torch.utils.data.Dataset):
     
     def create_dataset(self, dataset_path: str) -> None:
         with jsonlines.open(dataset_path, 'r') as f:
-            for _, line in enumerate(f.iter()):
+            for idx, line in enumerate(f.iter()):
                 # load sentences
                 start1 = int(line['start1'])
                 start2 = int(line['start2'])
@@ -55,7 +55,7 @@ class EmbeddedDataset(torch.utils.data.Dataset):
                 sentence_vector = torch.cat((v1, v2))
                 
                 label = torch.tensor(1.) if line['label'] == 'True' else torch.tensor(0.)
-                self.data.append((sentence_vector, label))
+                self.data[idx] = {"sentence_vector": sentence_vector, "label": label}
 
 
     def __len__(self) -> int:

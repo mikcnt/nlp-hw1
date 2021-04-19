@@ -33,9 +33,10 @@ class MLP(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
+        sentence_vector = batch["sentence_vector"]
         out = self.first_layer(
-            x
+            sentence_vector
         )  # First linear layer, transforms the hidden dimensions from `n_features` (embedding dimension) to `hidden_dim`
         for layer in self.layers:  # Apply `k` (linear, activation) layer
             out = layer(out)
@@ -62,7 +63,7 @@ class LSTMClassifier(nn.Module):
     ) -> None:
         super().__init__()
         self.vectors_store = vectors_store
-        self.input_size = vectors_store.size(1)
+        self.embedding_size = vectors_store.size(1)
         self.n_hidden = n_hidden
         self.num_layers = num_layers
         self.bidirectional = bidirectional
@@ -77,7 +78,7 @@ class LSTMClassifier(nn.Module):
 
         # recurrent layer
         self.rnn = torch.nn.LSTM(
-            input_size=self.input_size,
+            input_size=self.embedding_size,
             hidden_size=self.n_hidden,
             num_layers=self.num_layers,
             batch_first=True,
@@ -91,7 +92,7 @@ class LSTMClassifier(nn.Module):
             linear_features *= 2
 
         if self.use_lemma_embedding:
-            linear_features += 2 * self.input_size
+            linear_features += 2 * self.embedding_size
         
         # classification head
         self.lin1 = torch.nn.Linear(linear_features, linear_features)
@@ -101,7 +102,7 @@ class LSTMClassifier(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, batch):
+    def forward(self, batch: Dict[str, torch.Tensor]):
         sentence1 = batch["sentence1"]
         sentence2 = batch["sentence2"]
 
