@@ -15,7 +15,7 @@ def custom_tokenizer(sentence: str, marker: str) -> List[str]:
     for i, tk in enumerate(tokens):
         if marker in tk:
             target_position = i
-            tokens[i] = tk[20:]
+            tokens[i] = tk[len(marker):]
     return tokens, target_position
 
 
@@ -24,15 +24,17 @@ def preprocess(sentence: str, target_word=None) -> str:
     sentence = sentence.lower()
     # remove punctuation
     sentence = re.sub(r"[^\w\s]", " ", sentence)
+    # remove digits
+    # sentence = re.sub(r"\d", "", sentence).strip()
     # replace multiple adjacent spaces with one single space
     sentence = re.sub(" +", " ", sentence).strip()
-
+    
     tokens = sentence.split()
-    tokens_sw = [
+    sentence = ' '.join([
         word for word in tokens if (not word in set_stopwords or word == target_word)
-    ]
-
-    return " ".join(tokens_sw)
+    ])
+    
+    return sentence
 
 
 def get_neighbourhood(

@@ -1,3 +1,4 @@
+from collections import Counter, defaultdict
 from typing import List, Tuple, Optional, Dict
 import jsonlines
 
@@ -49,6 +50,8 @@ class IndicesDataset(torch.utils.data.Dataset):
                 lemma2 = s2[start2:end2]
                 lemma_index1 = torch.tensor(self.word_index[lemma1], dtype=torch.long)
                 lemma_index2 = torch.tensor(self.word_index[lemma2], dtype=torch.long)
+                
+                label = str(line["label"])
 
                 # insert special characters to locate target word after preprocessing
                 s1 = s1[:start1] + self.marker + s1[start1:]
@@ -77,7 +80,7 @@ class IndicesDataset(torch.utils.data.Dataset):
 
                 # label is either 1
                 label = (
-                    torch.tensor(1.0) if line["label"] == "True" else torch.tensor(0.0)
+                    torch.tensor(1.0) if label == "True" else torch.tensor(0.0)
                 )
 
                 # keep track of sentences and labels

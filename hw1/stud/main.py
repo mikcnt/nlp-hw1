@@ -12,7 +12,7 @@ from models import MLP, LSTMClassifier
 from trainer import fit
 
 # constants
-MODEL_TYPE = "LSTM"
+MODEL_TYPE = "MLP"
 
 if __name__ == "__main__":
     # seeds for reproducibility
@@ -46,7 +46,9 @@ if __name__ == "__main__":
 
     # select dataset according to model selection
     if MODEL_TYPE == "MLP":
-        embedder = WeightedAverageEmbedder(word_vectors, 1, 0)
+        embedder = WeightedAverageEmbedder(
+            word_vectors=word_vectors, max_weight=1, min_weight=0
+        )
         train_dataset = EmbeddedDataset(
             dataset_path=train_path, marker=marker, embedder=embedder, neigh_width=None
         )
@@ -103,7 +105,7 @@ if __name__ == "__main__":
     # to save/load checkpoints during training
     # checkpoint = Checkpoint(path="checkpoints/rnn")
 
-    epochs = 20
+    epochs = 50
 
     # start training
     losses, accuracies = fit(
