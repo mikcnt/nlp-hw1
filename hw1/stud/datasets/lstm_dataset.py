@@ -32,14 +32,23 @@ class IndicesDataset(torch.utils.data.Dataset):
         sentences1 = []
         sentences2 = []
         labels = []
+        
+        lemma_indexes1 = []
+        lemma_indexes2 = []
 
         with jsonlines.open(dataset_path, "r") as f:
             for _, line in enumerate(f.iter()):
                 # load sentences
                 start1 = int(line["start1"])
                 start2 = int(line["start2"])
+                end1 = int(line["end1"])
+                end2 = int(line["end2"])
                 s1 = line["sentence1"]
                 s2 = line["sentence2"]
+                lemma1 = s1[start1:end1]
+                lemma2 = s2[start2:end2]
+                lemma_index1 = torch.tensor(self.word_index[lemma1], dtype=torch.long)
+                lemma_index2 = torch.tensor(self.word_index[lemma2], dtype=torch.long)
 
                 # insert special characters to locate target word after preprocessing
                 s1 = s1[:start1] + self.marker + s1[start1:]
@@ -75,6 +84,10 @@ class IndicesDataset(torch.utils.data.Dataset):
                 sentences1.append(indices1)
                 sentences2.append(indices2)
                 labels.append(label)
+                
+                lemma_indexes1.append(lemma_index1)
+                lemma_indexes2.append(lemma_index2)
+                
 
         # pad all sentences with max length
         # (both sentences1 and sentences2 with same padding length)
@@ -86,8 +99,19 @@ class IndicesDataset(torch.utils.data.Dataset):
         sentences1 = padded_sentences[: len(sentences1)]
         sentences2 = padded_sentences[len(sentences1) :]
 
-        # data = tuples of sentence1, sentence2 and corresponding label
-        self.data = list(zip(sentences1, sentences2, labels))
+        # data = dictionaries containing
+        # indexes for sentence1, sentence2, lemma1, lemma2
+        # and label
+        self.data = {
+            idx: {
+                "sentence1": sentences1[idx],
+                "sentence2": sentences2[idx],
+                "lemma1": lemma_indexes1[idx],
+                "lemma2": lemma_indexes2[idx],
+                "label": labels[idx],
+            }
+            for idx in range(len(sentences1))
+        }
 
     def __len__(self) -> int:
         return len(self.data)

@@ -15,7 +15,9 @@ class MLP(nn.Module):
         super().__init__()
 
         linear_features = 2 * n_features
-        self.first_layer = nn.Linear(in_features=linear_features, out_features=hidden_dim)
+        self.first_layer = nn.Linear(
+            in_features=linear_features, out_features=hidden_dim
+        )
 
         self.layers = nn.ModuleList()
 
@@ -56,6 +58,7 @@ class LSTMClassifier(nn.Module):
         num_layers: int,
         bidirectional: bool = True,
         lstm_dropout: float = 0.3,
+        use_lemma_embedding: bool = True,
     ) -> None:
         super().__init__()
         self.vectors_store = vectors_store
@@ -64,6 +67,7 @@ class LSTMClassifier(nn.Module):
         self.num_layers = num_layers
         self.bidirectional = bidirectional
         self.lstm_dropout = lstm_dropout
+        self.use_lemma_embedding = use_lemma_embedding
 
         # embedding layer
         self.embedding = torch.nn.Embedding.from_pretrained(
@@ -86,6 +90,9 @@ class LSTMClassifier(nn.Module):
         if self.bidirectional:
             linear_features *= 2
 
+        if self.use_lemma_embedding:
+            linear_features += 2 * self.input_size
+        
         # classification head
         self.lin1 = torch.nn.Linear(linear_features, linear_features)
         self.lin2 = torch.nn.Linear(linear_features, 1)
@@ -94,7 +101,10 @@ class LSTMClassifier(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, sentence1, sentence2):
+    def forward(self, batch):
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
+
         # compute sentences length
         lengths1 = self._text_length(sentence1)
         lengths2 = self._text_length(sentence2)
@@ -111,6 +121,15 @@ class LSTMClassifier(nn.Module):
 
         # concatenate lstm outputs of both sentences
         lstm_out = torch.cat((lstm_out1, lstm_out2), dim=-1)
+        
+        if self.use_lemma_embedding:
+            lemma1 = batch["lemma1"]
+            lemma2 = batch["lemma2"]
+            # lemma embeddings
+            lemma_embedding1 = self.embedding(lemma1)
+            lemma_embedding2 = self.embedding(lemma2)
+            # concatenate target word embeddings embeddings
+            lstm_out = torch.cat((lstm_out, lemma_embedding1, lemma_embedding2), dim=-1)
 
         # linear pass
         out = self.lin1(lstm_out)

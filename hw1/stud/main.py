@@ -12,7 +12,7 @@ from models import MLP, LSTMClassifier
 from trainer import fit
 
 # constants
-MODEL_TYPE = "MLP"
+MODEL_TYPE = "LSTM"
 
 if __name__ == "__main__":
     # seeds for reproducibility
@@ -90,10 +90,11 @@ if __name__ == "__main__":
     elif MODEL_TYPE == "LSTM":
         model = LSTMClassifier(
             vectors_store=vectors_store,
-            n_hidden=1024,
+            n_hidden=512,
             num_layers=2,
             bidirectional=True,
             lstm_dropout=0.3,
+            use_lemma_embedding=False,
         ).to(device)
 
     # instantiate loss

@@ -6,7 +6,8 @@ from tqdm import tqdm
 from utils import Checkpoint
 
 def batch_to_device(batch: List[torch.Tensor], device: str) -> List[torch.Tensor]:
-    return [x.to(device) for x in batch]
+    return {key: value.to(device) for key, value in batch.items()}
+    # return [x.to(device) for x in batch]
 
 def fit(
     epochs: int,
@@ -40,13 +41,11 @@ def fit(
         for batch in train_iterator:
             # send batch to device
             batch = batch_to_device(batch, device)
-            batch_x = batch[:-1]
-            batch_y = batch[-1]
 
-            pred = model(*batch_x)
+            pred = model(batch)
 
             # compute loss and backprop
-            loss_train = criterion(pred, batch_y)
+            loss_train = criterion(pred, batch['label'])
             loss_train.backward()
             opt.step()
             opt.zero_grad()
@@ -56,7 +55,7 @@ def fit(
             # number of predictions
             d_train += pred.shape[0]
             # number of correct predictions
-            n_train += (batch_y == pred).int().sum().item()
+            n_train += (batch['label'] == pred).int().sum().item()
 
         model.eval()
         with torch.no_grad():
@@ -69,21 +68,19 @@ def fit(
             for batch in valid_iterator:
                 # send batch to device
                 batch = batch_to_device(batch, device)
-                batch_x = batch[:-1]
-                batch_y = batch[-1]
 
                 # compute predictions
-                pred_val = model(*batch_x)
+                pred_val = model(batch)
 
                 # compute loss (validation step => no backprop)
-                loss_val = criterion(pred_val, batch_y)
+                loss_val = criterion(pred_val, batch['label'])
                 losses_val += loss_val.item()
 
                 pred_val = torch.round(pred_val)
                 # number of predictions
                 d_val += pred_val.shape[0]
                 # number of correct predictions
-                n_val += (batch_y == pred_val).int().sum().item()
+                n_val += (batch['label'] == pred_val).int().sum().item()
 
         # compute accuracy (train + val)
         loss_train = losses_train / d_train
