@@ -93,7 +93,7 @@ class LSTMClassifier(nn.Module):
 
         if self.use_lemma_embedding:
             linear_features += 2 * self.embedding_size
-        
+
         # classification head
         self.lin1 = torch.nn.Linear(linear_features, linear_features)
         self.lin2 = torch.nn.Linear(linear_features, 1)
@@ -122,7 +122,7 @@ class LSTMClassifier(nn.Module):
 
         # concatenate lstm outputs of both sentences
         lstm_out = torch.cat((lstm_out1, lstm_out2), dim=-1)
-        
+
         if self.use_lemma_embedding:
             lemma1 = batch["lemma1"]
             lemma2 = batch["lemma2"]

@@ -20,7 +20,7 @@ class IndicesDataset(torch.utils.data.Dataset):
         marker: str,
         padding_value: int = 0,
         neigh_width: Optional[int] = None,
-    ):
+    ) -> None:
         self.marker = marker
         self.word_index = word_index
         self.padding_value = padding_value
@@ -32,7 +32,7 @@ class IndicesDataset(torch.utils.data.Dataset):
         sentences1 = []
         sentences2 = []
         labels = []
-        
+
         lemma_indexes1 = []
         lemma_indexes2 = []
 
@@ -84,10 +84,9 @@ class IndicesDataset(torch.utils.data.Dataset):
                 sentences1.append(indices1)
                 sentences2.append(indices2)
                 labels.append(label)
-                
+
                 lemma_indexes1.append(lemma_index1)
                 lemma_indexes2.append(lemma_index2)
-                
 
         # pad all sentences with max length
         # (both sentences1 and sentences2 with same padding length)
@@ -116,5 +115,5 @@ class IndicesDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, idx: int) -> torch.Tensor:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         return self.data[idx]

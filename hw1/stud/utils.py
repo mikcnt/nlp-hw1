@@ -1,4 +1,3 @@
-
 import pickle
 import os
 from collections import defaultdict
@@ -9,12 +8,14 @@ from typing import Dict, Tuple, List
 
 # save/load pickle
 def save_pickle(data: dict, path: str) -> None:
-    with open(path, 'wb') as f:
+    with open(path, "wb") as f:
         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
+
 def load_pickle(path: str) -> dict:
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         return pickle.load(f)
+
 
 # save/load models checkpoints
 # Saving / loading models
@@ -47,7 +48,7 @@ class Checkpoint:
             "optimizer_state_dict": optimizer.state_dict(),
             "epoch": epoch,
             "losses": losses,
-            "accuracies": accuracies
+            "accuracies": accuracies,
         }
         checkpoint_name = "{}.pth".format(str(epoch).zfill(3))
         complete_path = os.path.join(self.path, checkpoint_name)
@@ -65,26 +66,31 @@ class Checkpoint:
         model.load_state_dict(self.checkpoint["model_state_dict"])
         return model
 
+
 # load pretrained embedding dictionaries
-def embeddings_dictionary(embedding_path: str, skip_first=False) -> Dict[str, torch.Tensor]:
+def embeddings_dictionary(
+    embedding_path: str, skip_first=False
+) -> Dict[str, torch.Tensor]:
     word_vectors = dict()
-    num_lines = sum(1 for line in open(embedding_path,'r'))
+    num_lines = sum(1 for line in open(embedding_path, "r"))
     with open(embedding_path) as f:
         for i, line in tqdm(enumerate(f), total=num_lines):
-            
+
             if i == 0 and skip_first:
                 continue
             # for tests
             if i == 10000:
                 break
-            word, *vector = line.strip().split(' ')
+            word, *vector = line.strip().split(" ")
             vector = torch.tensor([float(c) for c in vector])
 
             word_vectors[word] = vector
     return word_vectors
 
 
-def index_dictionary(word_vectors: Dict[str, torch.Tensor]) -> Tuple[Dict[str, int], List[torch.Tensor]]:
+def index_dictionary(
+    word_vectors: Dict[str, torch.Tensor]
+) -> Tuple[Dict[str, int], List[torch.Tensor]]:
     word_index = dict()
     vectors_store = []
 
@@ -97,11 +103,13 @@ def index_dictionary(word_vectors: Dict[str, torch.Tensor]) -> Tuple[Dict[str, i
     # save index for each word
     for word, vector in word_vectors.items():
         # skip unk token if present
-        if word == '<unk>':
+        if word == "<unk>":
             continue
         word_index[word] = len(vectors_store)
         vectors_store.append(vector)
 
-    word_index = defaultdict(lambda: 1, word_index)  # default dict returns 1 (unk token) when unknown word
+    word_index = defaultdict(
+        lambda: 1, word_index
+    )  # default dict returns 1 (unk token) when unknown word
     vectors_store = torch.stack(vectors_store)
     return word_index, vectors_store
