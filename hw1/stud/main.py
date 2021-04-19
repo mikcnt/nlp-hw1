@@ -5,10 +5,14 @@ import torch
 from torch import nn
 
 from utils import embeddings_dictionary, index_dictionary, Checkpoint
-from datasets import IndicesDataset
-from models import LSTMClassifier
+from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
+from datasets.mlp_dataset import EmbeddedDataset
+from datasets.lstm_dataset import IndicesDataset
+from models import MLP, LSTMClassifier
 from trainer import fit
 
+# constants
+MODEL_TYPE = "MLP"
 
 if __name__ == "__main__":
     # seeds for reproducibility
@@ -22,14 +26,16 @@ if __name__ == "__main__":
     # dataset paths
     train_path = "../../data/train.jsonl"
     dev_path = "../../data/dev.jsonl"
-    
+
     # pretrained embedding path
     embedding_path = "../../embeddings/glove.6B.300d.txt"
-    
+
     # create vocabulary with pretrained embeddings
     print("Reading pretrained embeddings file...")
-    word_vectors = embeddings_dictionary(embedding_path=embedding_path, skip_first=False)
-    # word_vectors['<unk>'] = torch.rand(300)
+    word_vectors = embeddings_dictionary(
+        embedding_path=embedding_path, skip_first=False
+    )
+    word_vectors["<unk>"] = torch.rand(300)
 
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
@@ -38,12 +44,28 @@ if __name__ == "__main__":
     # so that we don't lose it during the preprocessing steps in the dataset creation
     marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
-    train_dataset = IndicesDataset(
-        dataset_path=train_path, word_index=word_index, marker=marker, neigh_width=5
-    )
-    val_dataset = IndicesDataset(
-        dataset_path=dev_path, word_index=word_index, marker=marker, neigh_width=5
-    )
+    # select dataset according to model selection
+    if MODEL_TYPE == "MLP":
+        embedder = WeightedAverageEmbedder(word_vectors, 1, 0)
+        train_dataset = EmbeddedDataset(
+            dataset_path=train_path, marker=marker, embedder=embedder, neigh_width=None
+        )
+        val_dataset = EmbeddedDataset(
+            dataset_path=dev_path, marker=marker, embedder=embedder, neigh_width=None
+        )
+    elif MODEL_TYPE == "LSTM":
+        train_dataset = IndicesDataset(
+            dataset_path=train_path,
+            word_index=word_index,
+            marker=marker,
+            neigh_width=None,
+        )
+        val_dataset = IndicesDataset(
+            dataset_path=dev_path,
+            word_index=word_index,
+            marker=marker,
+            neigh_width=None,
+        )
 
     # create dataloaders
     train_loader = torch.utils.data.DataLoader(
@@ -53,22 +75,32 @@ if __name__ == "__main__":
 
     # select device ('gpu' if available)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # instantiate loss, model, optimizer
+
+    # instantiate loss
     criterion = nn.BCELoss()
 
-    model = LSTMClassifier(
-        vectors_store=vectors_store,
-        n_hidden=1024,
-        num_layers=2,
-        bidirectional=True,
-        lstm_dropout=0.3,
-    ).to(device)
+    # select either MLP or LSTM as model
+    if MODEL_TYPE == "MLP":
+        model = MLP(
+            n_features=300,
+            num_layers=3,
+            hidden_dim=1024,
+            activation=nn.functional.relu,
+        ).to(device)
+    elif MODEL_TYPE == "LSTM":
+        model = LSTMClassifier(
+            vectors_store=vectors_store,
+            n_hidden=1024,
+            num_layers=2,
+            bidirectional=True,
+            lstm_dropout=0.3,
+        ).to(device)
 
+    # instantiate loss
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
 
     # to save/load checkpoints during training
-    checkpoint = Checkpoint(path="checkpoints/rnn")
+    # checkpoint = Checkpoint(path="checkpoints/rnn")
 
     epochs = 20
 
