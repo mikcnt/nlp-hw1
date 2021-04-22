@@ -25,26 +25,27 @@ from trainer import fit
 @dataclass
 class Args:
     # wandb
-    save_wandb = True
+    save_wandb = False
 
     # general parameters
     num_epochs = 15
     batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
-    model_type = "LSTM"
+    model_type = "MLP"
     vocab_threshold = 0
 
     # dataset parameters
     remove_stopwords = True
     remove_digits = True
     target_window = None
-    
+
     # MLP Parameters
     if model_type == "MLP":
         mlp_n_features = 300
-        mlp_num_layers = 4
-        mlp_n_hidden = 1024
+        mlp_num_layers = 2
+        mlp_n_hidden = 512
+        mlp_dropout = 0.3
 
     # LSTM Parameters
     if model_type == "LSTM":
@@ -54,10 +55,10 @@ class Args:
         sentence_bidirectional = True
         sentence_dropout = 0.3
 
-        use_pos = False
-        pos_embedding_size = 300
+        use_pos = True
+        pos_embedding_size = 150
         pos_vocab_size = len(pos_all_tags)
-        pos_n_hidden = 512
+        pos_n_hidden = 256
         pos_num_layers = 2
         pos_bidirectional = True
         pos_dropout = 0.3
@@ -126,13 +127,7 @@ if __name__ == "__main__":
 
     # select either MLP or LSTM as model
     if args.model_type == "MLP":
-        model = MlpClassifier(
-            n_features=300,
-            vectors_store=vectors_store,
-            num_layers=4,
-            hidden_dim=1024,
-            activation=nn.functional.relu,
-        ).to(device)
+        model = MlpClassifier(vectors_store, args).to(device)
     elif args.model_type == "LSTM":
         model = LstmClassifier(vectors_store, args).to(device)
 

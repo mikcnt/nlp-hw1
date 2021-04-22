@@ -2,11 +2,12 @@ import torch
 from torch import nn
 
 from typing import List, Tuple, Optional, Dict, Callable
+from utils import cosine_similarity
 
 
 def text_length(sentences: torch.Tensor) -> torch.Tensor:
     # search first zero
-    lengths = (sentences == 0).int().argmax(axis=1).to("cpu")
+    lengths = (sentences == 0).int().argmax(axis=1)
     # length 0 only if sentence has max length
     # => replace 0 with max length
     lengths[lengths == 0] = sentences.shape[-1]
@@ -64,10 +65,7 @@ class MlpClassifier(nn.Module):
     def __init__(
         self,
         vectors_store: List[torch.Tensor],
-        n_features: int,
-        num_layers: int,
-        hidden_dim: int,
-        activation: Callable[[torch.Tensor], torch.Tensor],
+        args,
     ) -> None:
         super().__init__()
 
@@ -76,22 +74,28 @@ class MlpClassifier(nn.Module):
             padding_idx=0,
         )
 
-        linear_features = 2 * n_features
+        linear_features = 2 * args.mlp_n_features
         self.first_layer = nn.Linear(
-            in_features=linear_features, out_features=hidden_dim
+            in_features=linear_features, out_features=args.mlp_n_hidden
         )
 
         self.layers = nn.ModuleList()
-
-        for _ in range(num_layers):
+        for i in range(args.mlp_num_layers):
             self.layers.append(
-                nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
+                nn.Linear(
+                    in_features=args.mlp_n_hidden * (i + 1),
+                    out_features=args.mlp_n_hidden * (i + 2),
+                )
             )
 
-        self.activation = activation
-        self.dropout = nn.Dropout(0.5)
+        self.activation = nn.ReLU()
+        # self.activation = activation
 
-        self.last_layer = nn.Linear(in_features=hidden_dim, out_features=1)
+        self.dropout = nn.Dropout(args.mlp_dropout)
+
+        self.last_layer = nn.Linear(
+            in_features=args.mlp_n_hidden * (i + 2), out_features=1
+        )
 
         self.sigmoid = nn.Sigmoid()
 
@@ -107,6 +111,8 @@ class MlpClassifier(nn.Module):
         embeddings1 = self.embedding(sentence1)
         embeddings2 = self.embedding(sentence2)
 
+        # compute the aggregation (i.e., mean) of the embeddings
+        # only taking into consideration non-padding values
         mask1 = (
             torch.arange(embeddings1.shape[1], device=embeddings2.device)
             < lengths1[..., None]
@@ -122,20 +128,25 @@ class MlpClassifier(nn.Module):
         embeddings2 = (embeddings2 * mask2.unsqueeze(-1)).sum(1) / lengths2.unsqueeze(
             -1
         )
+        # similarities
+        similarity = cosine_similarity(embeddings1, embeddings2).unsqueeze(1)
 
+        # TODO: how can we use a similarity based model?
+        # out = similarity
+        # return out.squeeze(1)
+
+        # concatenate aggregate embeddings of sentence1 and sentence2
         sentence_vector = torch.cat((embeddings1, embeddings2), dim=-1)
 
-        out = self.first_layer(
-            sentence_vector
-        )  # First linear layer, transforms the hidden dimensions from `n_features` (embedding dimension) to `hidden_dim`
-        for layer in self.layers:  # Apply `k` (linear, activation) layer
+        # first linear layer
+        out = self.first_layer(sentence_vector)
+        # following linear layers
+        for layer in self.layers:
             out = layer(out)
             out = self.activation(out)
             out = self.dropout(out)
-        out = self.last_layer(
-            out
-        )  # Last linear layer to bring the `hiddem_dim` features to a binary space (`True`/`False`)
-
+        # final linear layer
+        out = self.last_layer(out)
         out = self.sigmoid(out)
         return out.squeeze(-1)
 
@@ -214,8 +225,8 @@ class LstmClassifier(nn.Module):
         pos2 = batch["pos2"]
 
         # compute sentences length
-        lengths1 = text_length(sentence1)
-        lengths2 = text_length(sentence2)
+        lengths1 = text_length(sentence1).to("cpu")
+        lengths2 = text_length(sentence2).to("cpu")
 
         # text embeddings and LSTM
         sentence_embeddings1 = self.embedding_words(sentence1)

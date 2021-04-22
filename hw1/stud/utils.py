@@ -157,7 +157,7 @@ def config_wandb(args, model: nn.Module) -> None:
     config.remove_stopwords = args.remove_stopwords
     config.remove_digits = args.remove_digits
     config.target_window = args.target_window
-    
+
     # general parameters
     config.batch_size = args.batch_size
     config.num_epochs = args.num_epochs
@@ -167,25 +167,27 @@ def config_wandb(args, model: nn.Module) -> None:
     config.vocab_threshold = args.vocab_threshold
 
     # mlp parameters
-    if args.model_type == 'MLP':
+    if args.model_type == "MLP":
         config.mlp_n_features = args.mlp_n_features
         config.mlp_num_layers = args.mlp_num_layers
         config.mlp_n_hidden = args.mlp_n_hidden
-    
+        config.mlp_dropout = args.mlp_dropout
+
     # lstm parameters
-    if args.model_type == 'LSTM':
+    if args.model_type == "LSTM":
         config.sentence_embedding_size = args.sentence_embedding_size
         config.sentence_n_hidden = args.sentence_n_hidden
         config.sentence_num_layers = args.sentence_num_layers
         config.sentence_bidirectional = args.sentence_bidirectional
         config.sentence_dropout = args.sentence_dropout
         config.use_pos = args.use_pos
-        config.pos_embedding_size = args.pos_embedding_size
-        config.pos_vocab_size = args.pos_vocab_size
-        config.pos_n_hidden = args.pos_n_hidden
-        config.pos_num_layers = args.pos_num_layers
-        config.pos_bidirectional = args.pos_bidirectional
-        config.pos_dropout = args.pos_dropout
+        if args.use_pos:
+            config.pos_embedding_size = args.pos_embedding_size
+            config.pos_vocab_size = args.pos_vocab_size
+            config.pos_n_hidden = args.pos_n_hidden
+            config.pos_num_layers = args.pos_num_layers
+            config.pos_bidirectional = args.pos_bidirectional
+            config.pos_dropout = args.pos_dropout
 
     # parameter for wandb update
     config.log_interval = 1
@@ -193,3 +195,9 @@ def config_wandb(args, model: nn.Module) -> None:
     # save model parameters
     wandb.watch(model, log="all")
     return
+
+
+def cosine_similarity(v1: torch.Tensor, v2: torch.Tensor) -> torch.Tensor:
+    num = torch.sum(v1 * v2, dim=1)
+    den = torch.linalg.norm(v1, dim=1) * torch.linalg.norm(v2, dim=1)
+    return num / den

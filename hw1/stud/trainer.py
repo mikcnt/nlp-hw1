@@ -112,7 +112,7 @@ def fit(
             print(
                 f"Epoch {epoch} \t T. Loss = {loss_train:.4f}, V. Loss = {loss_val:.4f}, T. Accuracy {acc_train:.3f}, V. Accuracy {acc_val:.3f}."
             )
-        
+
         if save_wandb:
             # save losses on wandb
             wandb.log(
