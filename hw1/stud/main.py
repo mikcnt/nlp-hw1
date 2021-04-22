@@ -4,15 +4,41 @@ import numpy as np
 import torch
 from torch import nn
 
-from utils import embeddings_dictionary, index_dictionary, Checkpoint, word_vectors_most_common
+from dataclasses import dataclass
+
+from utils import (
+    embeddings_dictionary,
+    index_dictionary,
+    Checkpoint,
+    word_vectors_most_common,
+)
 from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
 from datasets.lstm_dataset import IndicesDataset
-from models import MLP, MLPEmbedding, LSTMClassifier
+from datasets.pos import pos_all_tags
+from models import MlpClassifier, LstmClassifier
 from trainer import fit
 
 # constants
 MODEL_TYPE = "LSTM"
+
+# LSTM args
+@dataclass
+class LstmArgs:
+    sentence_embedding_size = 300
+    sentence_n_hidden = 512
+    sentence_num_layers = 2
+    sentence_bidirectional = True
+    sentence_dropout = 0.3
+
+    use_pos = True
+    pos_embedding_size = 300
+    pos_vocab_size = len(pos_all_tags)
+    pos_n_hidden = 512
+    pos_num_layers = 2
+    pos_bidirectional = True
+    pos_dropout = 0.3
+
 
 if __name__ == "__main__":
     # seeds for reproducibility
@@ -35,7 +61,7 @@ if __name__ == "__main__":
     word_vectors = embeddings_dictionary(
         embedding_path=embedding_path, skip_first=False
     )
-    
+
     word_vectors = word_vectors_most_common(train_path, word_vectors, 1)
 
     # create dictionary from word to index and respective list of embedding tensors
@@ -45,30 +71,19 @@ if __name__ == "__main__":
     # so that we don't lose it during the preprocessing steps in the dataset creation
     marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
-    # select dataset according to model selection
-    # if MODEL_TYPE == "MLP":
-        # embedder = WeightedAverageEmbedder(
-        #     word_vectors=word_vectors, max_weight=1, min_weight=0
-        # )
-        # train_dataset = EmbeddedDataset(
-        #     dataset_path=train_path, marker=marker, embedder=embedder, neigh_width=None
-        # )
-        # val_dataset = EmbeddedDataset(
-        #     dataset_path=dev_path, marker=marker, embedder=embedder, neigh_width=None
-        # )
-    if MODEL_TYPE == "LSTM" or MODEL_TYPE == "MLP":
-        train_dataset = IndicesDataset(
-            dataset_path=train_path,
-            word_index=word_index,
-            marker=marker,
-            neigh_width=None,
-        )
-        val_dataset = IndicesDataset(
-            dataset_path=dev_path,
-            word_index=word_index,
-            marker=marker,
-            neigh_width=None,
-        )
+    # create train and validation datasets
+    train_dataset = IndicesDataset(
+        dataset_path=train_path,
+        word_index=word_index,
+        marker=marker,
+        neigh_width=None,
+    )
+    val_dataset = IndicesDataset(
+        dataset_path=dev_path,
+        word_index=word_index,
+        marker=marker,
+        neigh_width=None,
+    )
 
     # create dataloaders
     train_loader = torch.utils.data.DataLoader(
@@ -84,7 +99,7 @@ if __name__ == "__main__":
 
     # select either MLP or LSTM as model
     if MODEL_TYPE == "MLP":
-        model = MLPEmbedding(
+        model = MlpClassifier(
             n_features=300,
             vectors_store=vectors_store,
             num_layers=4,
@@ -92,14 +107,8 @@ if __name__ == "__main__":
             activation=nn.functional.relu,
         ).to(device)
     elif MODEL_TYPE == "LSTM":
-        model = LSTMClassifier(
-            vectors_store=vectors_store,
-            n_hidden=512,
-            num_layers=2,
-            bidirectional=True,
-            lstm_dropout=0.5,
-            use_lemma_embedding=False,
-        ).to(device)
+        lstm_args = LstmArgs()
+        model = LstmClassifier(vectors_store, lstm_args).to(device)
 
     # instantiate loss
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)

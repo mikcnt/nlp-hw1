@@ -7,6 +7,8 @@ from nltk.corpus import stopwords
 
 import torch
 
+from .pos import pos_indexes
+
 set_stopwords = set(stopwords.words())
 
 
@@ -30,9 +32,8 @@ def preprocess(sentence: str, target_word=None) -> str:
     sentence = re.sub(" +", " ", sentence).strip()
     
     tokens = sentence.split()
-    sentence = ' '.join([
-        word for word in tokens if (not word in set_stopwords or word == target_word)
-    ])
+    tokens = [word for word in tokens if (not word in set_stopwords or word == target_word)]
+    sentence = ' '.join(tokens)
     
     return sentence
 
@@ -56,3 +57,8 @@ def get_neighbourhood(
 
 def tokens2indices(word_index, tokens: List[str]) -> torch.Tensor:
     return torch.tensor([word_index[word] for word in tokens], dtype=torch.long)
+
+def compute_pos_tag_indexes(tokens):
+    tks_tags = nltk.pos_tag(tokens)
+    indexes = torch.tensor([pos_indexes[tk_tag[1]] for tk_tag in tks_tags])
+    return indexes
