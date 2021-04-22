@@ -3,7 +3,10 @@ import os
 from collections import defaultdict, Counter
 import jsonlines
 import torch
+from torch import nn
 from tqdm import tqdm
+
+import wandb
 
 from typing import Dict, Tuple, List
 
@@ -116,6 +119,7 @@ def index_dictionary(
     vectors_store = torch.stack(vectors_store)
     return word_index, vectors_store
 
+
 def word_vectors_most_common(dataset_path, word_vectors, threshold=1):
     vocabulary_count = Counter()
     with jsonlines.open(dataset_path, "r") as f:
@@ -126,10 +130,58 @@ def word_vectors_most_common(dataset_path, word_vectors, threshold=1):
             # preprocessing
             s1 = preprocess(s1)
             s2 = preprocess(s2)
-            
+
             t1 = s1.split()
             t2 = s2.split()
-            
+
             vocabulary_count.update(t1 + t2)
 
-    return {word: vector for word, vector in word_vectors.items() if vocabulary_count[word] >= threshold}
+    return {
+        word: vector
+        for word, vector in word_vectors.items()
+        if vocabulary_count[word] >= threshold
+    }
+
+
+def config_wandb(args, model: nn.Module) -> None:
+    """Save on wandb current training settings."""
+    # initialize wandb remote repo
+    wandb.init(project="nlp-hw1")
+
+    # wandb config hyperparameters
+    config = wandb.config
+
+    # general parameters
+    config.batch_size = args.batch_size
+    config.num_epochs = args.num_epochs
+    config.lr = args.lr
+    config.weight_decay = args.weight_decay
+    config.model_type = args.model_type
+
+    # mlp parameters
+    if args.model_type == 'MLP':
+        config.mlp_n_features = args.mlp_n_features
+        config.mlp_num_layers = args.mlp_num_layers
+        config.mlp_n_hidden = args.mlp_n_hidden
+    
+    # lstm parameters
+    if args.model_type == 'LSTM':
+        config.sentence_embedding_size = args.sentence_embedding_size
+        config.sentence_n_hidden = args.sentence_n_hidden
+        config.sentence_num_layers = args.sentence_num_layers
+        config.sentence_bidirectional = args.sentence_bidirectional
+        config.sentence_dropout = args.sentence_dropout
+        config.use_pos = args.use_pos
+        config.pos_embedding_size = args.pos_embedding_size
+        config.pos_vocab_size = args.pos_vocab_size
+        config.pos_n_hidden = args.pos_n_hidden
+        config.pos_num_layers = args.pos_num_layers
+        config.pos_bidirectional = args.pos_bidirectional
+        config.pos_dropout = args.pos_dropout
+
+    # parameter for wandb update
+    config.log_interval = 1
+
+    # save model parameters
+    wandb.watch(model, log="all")
+    return

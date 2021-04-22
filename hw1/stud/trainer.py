@@ -2,6 +2,7 @@ from typing import List, Optional
 import torch
 from torch import nn
 from tqdm import tqdm
+import wandb
 
 from utils import Checkpoint
 
@@ -18,6 +19,7 @@ def fit(
     opt: torch.optim.Optimizer,
     train_dl: torch.utils.data.DataLoader,
     valid_dl: torch.utils.data.DataLoader,
+    save_wandb: bool,
     checkpoint: Optional[Checkpoint] = None,
     verbose: int = 2,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -109,6 +111,17 @@ def fit(
         if verbose > 1:
             print(
                 f"Epoch {epoch} \t T. Loss = {loss_train:.4f}, V. Loss = {loss_val:.4f}, T. Accuracy {acc_train:.3f}, V. Accuracy {acc_val:.3f}."
+            )
+        
+        if save_wandb:
+            # save losses on wandb
+            wandb.log(
+                {
+                    "Train loss": loss_train,
+                    "Train Accuracy": acc_train,
+                    "Val loss": loss_val,
+                    "Val Accuracy": acc_val,
+                }
             )
 
     if verbose > 0:

@@ -6,11 +6,13 @@ from torch import nn
 
 from dataclasses import dataclass
 
+import wandb
 from utils import (
     embeddings_dictionary,
     index_dictionary,
     Checkpoint,
     word_vectors_most_common,
+    config_wandb,
 )
 from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
@@ -24,20 +26,39 @@ MODEL_TYPE = "LSTM"
 
 # LSTM args
 @dataclass
-class LstmArgs:
-    sentence_embedding_size = 300
-    sentence_n_hidden = 512
-    sentence_num_layers = 2
-    sentence_bidirectional = True
-    sentence_dropout = 0.3
+class Args():
+    # wandb
+    save_wandb = True
 
-    use_pos = True
-    pos_embedding_size = 300
-    pos_vocab_size = len(pos_all_tags)
-    pos_n_hidden = 512
-    pos_num_layers = 2
-    pos_bidirectional = True
-    pos_dropout = 0.3
+    # general parameters
+    num_epochs = 50
+    batch_size = 64
+    lr = 0.0001
+    weight_decay = 0.0001
+    model_type = "LSTM"
+    
+    # MLP Parameters
+    if model_type == 'MLP':
+        mlp_n_features = 300
+        mlp_num_layers = 4
+        mlp_n_hidden = 1024
+    
+    
+    # LSTM Parameters
+    if model_type == 'LSTM':
+        sentence_embedding_size = 300
+        sentence_n_hidden = 512
+        sentence_num_layers = 2
+        sentence_bidirectional = True
+        sentence_dropout = 0.3
+
+        use_pos = True
+        pos_embedding_size = 300
+        pos_vocab_size = len(pos_all_tags)
+        pos_n_hidden = 512
+        pos_num_layers = 2
+        pos_bidirectional = True
+        pos_dropout = 0.3
 
 
 if __name__ == "__main__":
@@ -48,6 +69,8 @@ if __name__ == "__main__":
     torch.cuda.manual_seed_all(42)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    
+    args = Args()
 
     # dataset paths
     train_path = "../../data/train.jsonl"
@@ -62,7 +85,7 @@ if __name__ == "__main__":
         embedding_path=embedding_path, skip_first=False
     )
 
-    word_vectors = word_vectors_most_common(train_path, word_vectors, 1)
+    # word_vectors = word_vectors_most_common(train_path, word_vectors, 1)
 
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
@@ -87,9 +110,9 @@ if __name__ == "__main__":
 
     # create dataloaders
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=32, shuffle=True
+        train_dataset, batch_size=64, shuffle=True
     )
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False)
 
     # select device ('gpu' if available)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -107,25 +130,27 @@ if __name__ == "__main__":
             activation=nn.functional.relu,
         ).to(device)
     elif MODEL_TYPE == "LSTM":
-        lstm_args = LstmArgs()
-        model = LstmClassifier(vectors_store, lstm_args).to(device)
+        model = LstmClassifier(vectors_store, args).to(device)
 
     # instantiate loss
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # to save/load checkpoints during training
     # checkpoint = Checkpoint(path="checkpoints/rnn")
 
-    epochs = 50
-
+    # save current training on wandb
+    if args.save_wandb:
+        config_wandb(args, model)
+    
     # start training
     losses, accuracies = fit(
-        epochs,
+        args.num_epochs,
         model,
         criterion,
         optimizer,
         train_loader,
         val_loader,
+        args.save_wandb,
         checkpoint=None,
         device=device,
     )
