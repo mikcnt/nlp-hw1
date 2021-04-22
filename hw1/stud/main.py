@@ -21,38 +21,40 @@ from datasets.pos import pos_all_tags
 from models import MlpClassifier, LstmClassifier
 from trainer import fit
 
-# constants
-MODEL_TYPE = "LSTM"
 
-# LSTM args
 @dataclass
-class Args():
+class Args:
     # wandb
     save_wandb = True
 
     # general parameters
-    num_epochs = 50
+    num_epochs = 15
     batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
     model_type = "LSTM"
+    vocab_threshold = 0
+
+    # dataset parameters
+    remove_stopwords = True
+    remove_digits = True
+    target_window = None
     
     # MLP Parameters
-    if model_type == 'MLP':
+    if model_type == "MLP":
         mlp_n_features = 300
         mlp_num_layers = 4
         mlp_n_hidden = 1024
-    
-    
+
     # LSTM Parameters
-    if model_type == 'LSTM':
+    if model_type == "LSTM":
         sentence_embedding_size = 300
         sentence_n_hidden = 512
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
 
-        use_pos = True
+        use_pos = False
         pos_embedding_size = 300
         pos_vocab_size = len(pos_all_tags)
         pos_n_hidden = 512
@@ -69,7 +71,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed_all(42)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    
+
     args = Args()
 
     # dataset paths
@@ -85,7 +87,9 @@ if __name__ == "__main__":
         embedding_path=embedding_path, skip_first=False
     )
 
-    # word_vectors = word_vectors_most_common(train_path, word_vectors, 1)
+    word_vectors = word_vectors_most_common(
+        train_path, word_vectors, args.vocab_threshold
+    )
 
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
@@ -99,13 +103,13 @@ if __name__ == "__main__":
         dataset_path=train_path,
         word_index=word_index,
         marker=marker,
-        neigh_width=None,
+        args=args,
     )
     val_dataset = IndicesDataset(
         dataset_path=dev_path,
         word_index=word_index,
         marker=marker,
-        neigh_width=None,
+        args=args,
     )
 
     # create dataloaders
@@ -121,7 +125,7 @@ if __name__ == "__main__":
     criterion = nn.BCELoss()
 
     # select either MLP or LSTM as model
-    if MODEL_TYPE == "MLP":
+    if args.model_type == "MLP":
         model = MlpClassifier(
             n_features=300,
             vectors_store=vectors_store,
@@ -129,11 +133,13 @@ if __name__ == "__main__":
             hidden_dim=1024,
             activation=nn.functional.relu,
         ).to(device)
-    elif MODEL_TYPE == "LSTM":
+    elif args.model_type == "LSTM":
         model = LstmClassifier(vectors_store, args).to(device)
 
     # instantiate loss
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+    )
 
     # to save/load checkpoints during training
     # checkpoint = Checkpoint(path="checkpoints/rnn")
@@ -141,7 +147,7 @@ if __name__ == "__main__":
     # save current training on wandb
     if args.save_wandb:
         config_wandb(args, model)
-    
+
     # start training
     losses, accuracies = fit(
         args.num_epochs,

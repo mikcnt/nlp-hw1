@@ -121,6 +121,8 @@ def index_dictionary(
 
 
 def word_vectors_most_common(dataset_path, word_vectors, threshold=1):
+    if threshold == 0:
+        return word_vectors
     vocabulary_count = Counter()
     with jsonlines.open(dataset_path, "r") as f:
         for line in f.iter():
@@ -151,12 +153,18 @@ def config_wandb(args, model: nn.Module) -> None:
     # wandb config hyperparameters
     config = wandb.config
 
+    # dataset parameters
+    config.remove_stopwords = args.remove_stopwords
+    config.remove_digits = args.remove_digits
+    config.target_window = args.target_window
+    
     # general parameters
     config.batch_size = args.batch_size
     config.num_epochs = args.num_epochs
     config.lr = args.lr
     config.weight_decay = args.weight_decay
     config.model_type = args.model_type
+    config.vocab_threshold = args.vocab_threshold
 
     # mlp parameters
     if args.model_type == 'MLP':

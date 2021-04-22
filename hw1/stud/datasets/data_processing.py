@@ -21,19 +21,22 @@ def custom_tokenizer(sentence: str, marker: str) -> List[str]:
     return tokens, target_position
 
 
-def preprocess(sentence: str, target_word=None) -> str:
+def preprocess(sentence: str, target_word=None, remove_stopwords=True, remove_digits=True) -> str:
     # lowercase sentence
     sentence = sentence.lower()
     # remove punctuation
     sentence = re.sub(r"[^\w\s]", " ", sentence)
     # remove digits
-    # sentence = re.sub(r"\d", "", sentence).strip()
+    if remove_digits:
+        sentence = re.sub(r"\d", "", sentence).strip()
     # replace multiple adjacent spaces with one single space
     sentence = re.sub(" +", " ", sentence).strip()
     
-    tokens = sentence.split()
-    tokens = [word for word in tokens if (not word in set_stopwords or word == target_word)]
-    sentence = ' '.join(tokens)
+    # remove stopwords
+    if remove_stopwords:
+        tokens = sentence.split()
+        tokens = [word for word in tokens if (not word in set_stopwords or word == target_word)]
+        sentence = ' '.join(tokens)
     
     return sentence
 

@@ -20,13 +20,11 @@ class IndicesDataset(torch.utils.data.Dataset):
         dataset_path: str,
         word_index: Dict[str, int],
         marker: str,
-        padding_value: int = 0,
-        neigh_width: Optional[int] = None,
+        args,
     ) -> None:
         self.marker = marker
         self.word_index = word_index
-        self.padding_value = padding_value
-        self.neigh_width = neigh_width
+        self.args = args
 
         self.create_dataset(dataset_path)
 
@@ -50,10 +48,8 @@ class IndicesDataset(torch.utils.data.Dataset):
                 end2 = int(line["end2"])
                 s1 = line["sentence1"]
                 s2 = line["sentence2"]
-                lemma1 = s1[start1:end1]
-                lemma2 = s2[start2:end2]
-                lemma_index1 = torch.tensor(self.word_index[lemma1], dtype=torch.long)
-                lemma_index2 = torch.tensor(self.word_index[lemma2], dtype=torch.long)
+                target_word1 = s1[start1:end1]
+                target_word2 = s2[start2:end2]
 
                 label = str(line["label"])
 
@@ -62,8 +58,18 @@ class IndicesDataset(torch.utils.data.Dataset):
                 s2 = s2[:start2] + self.marker + s2[start2:]
 
                 # preprocessing
-                s1 = preprocess(s1)
-                s2 = preprocess(s2)
+                s1 = preprocess(
+                    s1,
+                    target_word1,
+                    self.args.remove_stopwords,
+                    self.args.remove_digits,
+                )
+                s2 = preprocess(
+                    s2,
+                    target_word2,
+                    self.args.remove_stopwords,
+                    self.args.remove_digits,
+                )
 
                 # tokenization
                 t1, target_position1 = custom_tokenizer(s1, self.marker)
@@ -74,12 +80,12 @@ class IndicesDataset(torch.utils.data.Dataset):
                 pos2 = compute_pos_tag_indexes(t2)
 
                 # get neighbourhood of words
-                if self.neigh_width:
+                if self.args.target_window is not None:
                     t1, target_position1 = get_neighbourhood(
-                        t1, target_position1, self.neigh_width
+                        t1, target_position1, self.args.target_window
                     )
                     t2, target_position2 = get_neighbourhood(
-                        t2, target_position2, self.neigh_width
+                        t2, target_position2, self.args.target_window
                     )
 
                 # sentences to indices
@@ -94,9 +100,6 @@ class IndicesDataset(torch.utils.data.Dataset):
                 sentences2.append(indices2)
 
                 labels.append(label)
-
-                lemma_indexes1.append(lemma_index1)
-                lemma_indexes2.append(lemma_index2)
 
                 pos_indexes1.append(pos1)
                 pos_indexes2.append(pos2)
@@ -115,8 +118,6 @@ class IndicesDataset(torch.utils.data.Dataset):
             idx: {
                 "sentence1": sentences1[idx],
                 "sentence2": sentences2[idx],
-                "lemma1": lemma_indexes1[idx],
-                "lemma2": lemma_indexes2[idx],
                 "pos1": pos_indexes1[idx],
                 "pos2": pos_indexes2[idx],
                 "label": labels[idx],
@@ -132,7 +133,7 @@ class IndicesDataset(torch.utils.data.Dataset):
 
     def pad_and_split(self, elements1, elements2):
         padded_elements = nn.utils.rnn.pad_sequence(
-            elements1 + elements2, batch_first=True, padding_value=self.padding_value
+            elements1 + elements2, batch_first=True, padding_value=0
         )
         elements1 = padded_elements[: len(elements1)]
         elements2 = padded_elements[len(elements1) :]
