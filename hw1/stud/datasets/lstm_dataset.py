@@ -10,6 +10,7 @@ from .data_processing import (
     custom_tokenizer,
     get_neighbourhood,
     tokens2indices,
+    compute_pos_tag_indexes,
 )
 
 
@@ -37,6 +38,9 @@ class IndicesDataset(torch.utils.data.Dataset):
         lemma_indexes1 = []
         lemma_indexes2 = []
 
+        pos_indexes1 = []
+        pos_indexes2 = []
+
         with jsonlines.open(dataset_path, "r") as f:
             for _, line in enumerate(f.iter()):
                 # load sentences
@@ -50,7 +54,7 @@ class IndicesDataset(torch.utils.data.Dataset):
                 lemma2 = s2[start2:end2]
                 lemma_index1 = torch.tensor(self.word_index[lemma1], dtype=torch.long)
                 lemma_index2 = torch.tensor(self.word_index[lemma2], dtype=torch.long)
-                
+
                 label = str(line["label"])
 
                 # insert special characters to locate target word after preprocessing
@@ -64,6 +68,10 @@ class IndicesDataset(torch.utils.data.Dataset):
                 # tokenization
                 t1, target_position1 = custom_tokenizer(s1, self.marker)
                 t2, target_position2 = custom_tokenizer(s2, self.marker)
+
+                # POS indexes
+                pos1 = compute_pos_tag_indexes(t1)
+                pos2 = compute_pos_tag_indexes(t2)
 
                 # get neighbourhood of words
                 if self.neigh_width:
@@ -79,27 +87,26 @@ class IndicesDataset(torch.utils.data.Dataset):
                 indices2 = tokens2indices(self.word_index, t2)
 
                 # label is either 1
-                label = (
-                    torch.tensor(1.0) if label == "True" else torch.tensor(0.0)
-                )
+                label = torch.tensor(1.0) if label == "True" else torch.tensor(0.0)
 
-                # keep track of sentences and labels
+                # keep track of sentences, labels, pos tags
                 sentences1.append(indices1)
                 sentences2.append(indices2)
+
                 labels.append(label)
 
                 lemma_indexes1.append(lemma_index1)
                 lemma_indexes2.append(lemma_index2)
 
+                pos_indexes1.append(pos1)
+                pos_indexes2.append(pos2)
+
         # pad all sentences with max length
         # (both sentences1 and sentences2 with same padding length)
-        padded_sentences = nn.utils.rnn.pad_sequence(
-            sentences1 + sentences2, batch_first=True, padding_value=self.padding_value
-        )
+        sentences1, sentences2 = self.pad_and_split(sentences1, sentences2)
 
-        # split back again sentences1 and sentences2
-        sentences1 = padded_sentences[: len(sentences1)]
-        sentences2 = padded_sentences[len(sentences1) :]
+        # pad all pos tags with max length
+        pos_indexes1, pos_indexes2 = self.pad_and_split(pos_indexes1, pos_indexes2)
 
         # data = dictionaries containing
         # indexes for sentence1, sentence2, lemma1, lemma2
@@ -110,6 +117,8 @@ class IndicesDataset(torch.utils.data.Dataset):
                 "sentence2": sentences2[idx],
                 "lemma1": lemma_indexes1[idx],
                 "lemma2": lemma_indexes2[idx],
+                "pos1": pos_indexes1[idx],
+                "pos2": pos_indexes2[idx],
                 "label": labels[idx],
             }
             for idx in range(len(sentences1))
@@ -120,3 +129,11 @@ class IndicesDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         return self.data[idx]
+
+    def pad_and_split(self, elements1, elements2):
+        padded_elements = nn.utils.rnn.pad_sequence(
+            elements1 + elements2, batch_first=True, padding_value=self.padding_value
+        )
+        elements1 = padded_elements[: len(elements1)]
+        elements2 = padded_elements[len(elements1) :]
+        return elements1, elements2
