@@ -68,7 +68,7 @@ def tokens2indices(word_index, tokens: List[str]) -> torch.Tensor:
     return torch.tensor([word_index[word] for word in tokens], dtype=torch.long)
 
 
-def compute_pos_tag_indexes(tokens):
+def compute_pos_tag_indexes(tokens: List[str]) -> torch.Tensor:
     tks_tags = nltk.pos_tag(tokens)
     indexes = torch.tensor([pos_indexes[tk_tag[1]] for tk_tag in tks_tags])
     return indexes

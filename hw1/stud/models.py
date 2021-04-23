@@ -68,13 +68,22 @@ class MlpClassifier(nn.Module):
         args,
     ) -> None:
         super().__init__()
-
+        self.args = args
+        # Embeddings
         self.embedding = nn.Embedding.from_pretrained(
             vectors_store,
             padding_idx=0,
         )
 
         linear_features = 2 * args.mlp_n_features
+
+        # POS embedding
+        if args.use_pos:
+            self.embedding_pos = nn.Embedding(
+                args.pos_vocab_size, args.pos_embedding_size, padding_idx=0
+            )
+            linear_features += 2 * args.pos_embedding_size
+
         self.first_layer = nn.Linear(
             in_features=linear_features, out_features=args.mlp_n_hidden
         )
@@ -103,6 +112,9 @@ class MlpClassifier(nn.Module):
         sentence1 = batch["sentence1"]
         sentence2 = batch["sentence2"]
 
+        pos1 = batch["pos1"]
+        pos2 = batch["pos2"]
+
         # compute sentences length
         lengths1 = text_length(sentence1)
         lengths2 = text_length(sentence2)
@@ -113,30 +125,21 @@ class MlpClassifier(nn.Module):
 
         # compute the aggregation (i.e., mean) of the embeddings
         # only taking into consideration non-padding values
-        mask1 = (
-            torch.arange(embeddings1.shape[1], device=embeddings2.device)
-            < lengths1[..., None]
-        )
-        embeddings1 = (embeddings1 * mask1.unsqueeze(-1)).sum(1) / lengths1.unsqueeze(
-            -1
-        )
-
-        mask2 = (
-            torch.arange(embeddings2.shape[1], device=embeddings2.device)
-            < lengths2[..., None]
-        )
-        embeddings2 = (embeddings2 * mask2.unsqueeze(-1)).sum(1) / lengths2.unsqueeze(
-            -1
-        )
-        # similarities
-        similarity = cosine_similarity(embeddings1, embeddings2).unsqueeze(1)
-
-        # TODO: how can we use a similarity based model?
-        # out = similarity
-        # return out.squeeze(1)
+        embeddings1 = self._forward_embedding(embeddings1, lengths1)
+        embeddings2 = self._forward_embedding(embeddings2, lengths2)
 
         # concatenate aggregate embeddings of sentence1 and sentence2
         sentence_vector = torch.cat((embeddings1, embeddings2), dim=-1)
+
+        # use pos embeddings
+        if self.args.use_pos:
+            pos_embedding1 = self.embedding_pos(pos1)
+            pos_embedding2 = self.embedding_pos(pos2)
+            pos_embedding1 = self._forward_embedding(pos_embedding1, lengths1)
+            pos_embedding2 = self._forward_embedding(pos_embedding2, lengths2)
+            sentence_vector = torch.cat(
+                (sentence_vector, pos_embedding1, pos_embedding2), dim=-1
+            )
 
         # first linear layer
         out = self.first_layer(sentence_vector)
@@ -149,6 +152,17 @@ class MlpClassifier(nn.Module):
         out = self.last_layer(out)
         out = self.sigmoid(out)
         return out.squeeze(-1)
+
+    def _forward_embedding(
+        self, embeddings: torch.Tensor, lengths: torch.Tensor
+    ) -> torch.Tensor:
+        mask = (
+            torch.arange(embeddings.shape[1], device=embeddings.device)
+            < lengths[..., None]
+        )
+        # compute mean of embeddings (excluding padded elements)
+        embeddings = (embeddings * mask.unsqueeze(-1)).sum(1) / lengths.unsqueeze(-1)
+        return embeddings
 
 
 # LSTM model
@@ -267,7 +281,9 @@ class LstmClassifier(nn.Module):
 
         return out
 
-    def _rnn_forward(self, rnn_layer, embeddings, lengths):
+    def _rnn_forward(
+        self, rnn_layer: nn.Module, embeddings: torch.Tensor, lengths: torch.Tensor
+    ) -> torch.Tensor:
         # pack input
         n_hidden = rnn_layer.hidden_size
         packed_input = nn.utils.rnn.pack_padded_sequence(

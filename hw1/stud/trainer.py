@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -14,16 +14,16 @@ def batch_to_device(batch: List[torch.Tensor], device: str) -> List[torch.Tensor
 
 def fit(
     epochs: int,
+    device: str,
+    save_wandb: bool,
     model: nn.Module,
     criterion: nn.Module,
-    opt: torch.optim.Optimizer,
     train_dl: torch.utils.data.DataLoader,
     valid_dl: torch.utils.data.DataLoader,
-    save_wandb: bool,
+    opt: torch.optim.Optimizer,
+    scheduler: Any = None,
     checkpoint: Optional[Checkpoint] = None,
     verbose: int = 2,
-    device: str = "cuda" if torch.cuda.is_available() else "cpu",
-    scheduler = None,
 ) -> None:
 
     # keep track of losses and accuracies
@@ -90,7 +90,7 @@ def fit(
                 d_val += pred_val.shape[0]
                 # number of correct predictions
                 n_val += (batch["label"] == pred_val).int().sum().item()
-        
+
         if scheduler is not None:
             scheduler.step()
 

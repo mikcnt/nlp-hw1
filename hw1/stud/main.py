@@ -28,7 +28,6 @@ class Args:
     save_wandb = False
 
     # general parameters
-    model_type = "LSTM"
     num_epochs = 15
     batch_size = 64
     lr = 0.0001
@@ -40,6 +39,10 @@ class Args:
     remove_digits = True
     remove_target_word = False
     target_window = None
+
+    # model parameters
+    model_type = "MLP"
+    use_pos = False
 
     # MLP Parameters
     if model_type == "MLP":
@@ -56,13 +59,15 @@ class Args:
         sentence_bidirectional = True
         sentence_dropout = 0.3
 
-        use_pos = False
-        pos_embedding_size = 150
+    # POS parameters
+    if use_pos:
+        pos_embedding_size = 300
         pos_vocab_size = len(pos_all_tags)
-        pos_n_hidden = 256
-        pos_num_layers = 2
-        pos_bidirectional = True
-        pos_dropout = 0.3
+        if model_type == "LSTM":
+            pos_n_hidden = 256
+            pos_num_layers = 2
+            pos_bidirectional = True
+            pos_dropout = 0.3
 
 
 if __name__ == "__main__":
@@ -89,6 +94,7 @@ if __name__ == "__main__":
         embedding_path=embedding_path, skip_first=False
     )
 
+    # remove words with low frequency (if `args.vocab_threshold` != 0)
     word_vectors = word_vectors_most_common(
         train_path, word_vectors, args.vocab_threshold
     )
@@ -96,7 +102,7 @@ if __name__ == "__main__":
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
 
-    # create random string of 20 characters to mark target word
+    # create random string of 20 characters to mark the target word
     # so that we don't lose it during the preprocessing steps in the dataset creation
     marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
@@ -136,11 +142,11 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
-    
-    scheduler = None # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
+
+    scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
-    # checkpoint = Checkpoint(path="checkpoints/rnn")
+    checkpoint = None  # Checkpoint(path="checkpoints/rnn")
 
     # save current training on wandb
     if args.save_wandb:
@@ -148,14 +154,15 @@ if __name__ == "__main__":
 
     # start training
     losses, accuracies = fit(
-        args.num_epochs,
-        model,
-        criterion,
-        optimizer,
-        train_loader,
-        val_loader,
-        args.save_wandb,
-        checkpoint=None,
+        epochs=args.num_epochs,
         device=device,
+        save_wandb=args.save_wandb,
+        model=model,
+        criterion=criterion,
+        train_dl=train_loader,
+        valid_dl=val_loader,
+        opt=optimizer,
         scheduler=scheduler,
+        checkpoint=checkpoint,
+        verbose=2,
     )

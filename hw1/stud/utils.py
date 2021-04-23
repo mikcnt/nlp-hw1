@@ -25,7 +25,7 @@ def load_pickle(path: str) -> dict:
 
 # save/load models checkpoints
 class Checkpoint:
-    def __init__(self, path: str, resume=False):
+    def __init__(self, path: str, resume: bool = False) -> None:
         self.path = path
         os.makedirs(path, exist_ok=True)
         self.resume = resume
@@ -120,7 +120,9 @@ def index_dictionary(
     return word_index, vectors_store
 
 
-def word_vectors_most_common(dataset_path, word_vectors, threshold=1):
+def word_vectors_most_common(
+    dataset_path: str, word_vectors: Dict[str, torch.Tensor], threshold: int = 1
+) -> Dict[str, torch.Tensor]:
     if threshold == 0:
         return word_vectors
     vocabulary_count = Counter()
@@ -157,6 +159,7 @@ def config_wandb(args, model: nn.Module) -> None:
     config.remove_stopwords = args.remove_stopwords
     config.remove_digits = args.remove_digits
     config.target_window = args.target_window
+    config.remove_target_word = args.remove_target_word
 
     # general parameters
     config.batch_size = args.batch_size
