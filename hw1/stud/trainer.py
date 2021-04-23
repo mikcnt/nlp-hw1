@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 import torch
 from torch import nn
 from tqdm import tqdm
