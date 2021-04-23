@@ -75,6 +75,11 @@ class IndicesDataset(torch.utils.data.Dataset):
                 t1, target_position1 = custom_tokenizer(s1, self.marker)
                 t2, target_position2 = custom_tokenizer(s2, self.marker)
 
+                # remove target word
+                if self.args.remove_target_word:
+                    t1 = [t1[i] for i in range(len(t1)) if i != target_position1]
+                    t2 = [t2[i] for i in range(len(t2)) if i != target_position2]
+                
                 # POS indexes
                 pos1 = compute_pos_tag_indexes(t1)
                 pos2 = compute_pos_tag_indexes(t2)

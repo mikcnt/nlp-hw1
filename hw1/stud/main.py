@@ -28,16 +28,17 @@ class Args:
     save_wandb = False
 
     # general parameters
+    model_type = "LSTM"
     num_epochs = 15
     batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
-    model_type = "MLP"
     vocab_threshold = 0
 
     # dataset parameters
     remove_stopwords = True
     remove_digits = True
+    remove_target_word = False
     target_window = None
 
     # MLP Parameters
@@ -55,7 +56,7 @@ class Args:
         sentence_bidirectional = True
         sentence_dropout = 0.3
 
-        use_pos = True
+        use_pos = False
         pos_embedding_size = 150
         pos_vocab_size = len(pos_all_tags)
         pos_n_hidden = 256
@@ -131,10 +132,12 @@ if __name__ == "__main__":
     elif args.model_type == "LSTM":
         model = LstmClassifier(vectors_store, args).to(device)
 
-    # instantiate loss
+    # instantiate optimizer
     optimizer = torch.optim.Adam(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
+    
+    scheduler = None # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
     # checkpoint = Checkpoint(path="checkpoints/rnn")
@@ -154,4 +157,5 @@ if __name__ == "__main__":
         args.save_wandb,
         checkpoint=None,
         device=device,
+        scheduler=scheduler,
     )

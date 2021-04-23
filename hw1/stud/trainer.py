@@ -23,6 +23,7 @@ def fit(
     checkpoint: Optional[Checkpoint] = None,
     verbose: int = 2,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    scheduler = None,
 ) -> None:
 
     # keep track of losses and accuracies
@@ -89,6 +90,9 @@ def fit(
                 d_val += pred_val.shape[0]
                 # number of correct predictions
                 n_val += (batch["label"] == pred_val).int().sum().item()
+        
+        if scheduler is not None:
+            scheduler.step()
 
         # compute accuracy (train + val)
         loss_train = losses_train / d_train
