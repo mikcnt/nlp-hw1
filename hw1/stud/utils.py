@@ -80,12 +80,11 @@ def embeddings_dictionary(
     num_lines = sum(1 for line in open(embedding_path, "r"))
     with open(embedding_path) as f:
         for i, line in tqdm(enumerate(f), total=num_lines):
-
             if i == 0 and skip_first:
                 continue
             # for tests
-            if i == 10000:
-                break
+            # if i == 10000:
+            #     break
             word, *vector = line.strip().split(" ")
             vector = torch.tensor([float(c) for c in vector])
 

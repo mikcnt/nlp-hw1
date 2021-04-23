@@ -18,7 +18,7 @@ from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
 from datasets.lstm_dataset import IndicesDataset
 from datasets.pos import pos_all_tags
-from models import MlpClassifier, LstmClassifier, BilinearClassifier
+from models import MlpClassifier, LstmClassifier, BilinearClassifier, LstmBilinearClassifier
 from trainer import fit
 
 
@@ -42,7 +42,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "LSTM"
+    model_type = "BILINEAR"
     use_pos = False
 
     # MLP Parameters
@@ -63,7 +63,7 @@ class Args:
     if model_type == "BILINEAR":
         bi_n_features = 300
         bi_n_hidden = 400
-        bi_dropout = 0.4
+        bi_dropout = 0.3
 
     # POS parameters
     if use_pos:
