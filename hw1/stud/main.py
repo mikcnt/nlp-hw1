@@ -18,14 +18,15 @@ from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
 from datasets.lstm_dataset import IndicesDataset
 from datasets.pos import pos_all_tags
-from models import MlpClassifier, LstmClassifier, BilinearClassifier
+from models import MlpClassifier, LstmClassifier, BilinearClassifier, LstmBilinearClassifier
 from trainer import fit
 
 
 @dataclass
 class Args:
     # wandb
-    save_wandb = True
+    save_wandb = False
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
     num_epochs = 15
@@ -131,19 +132,16 @@ if __name__ == "__main__":
     )
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False)
 
-    # select device ('gpu' if available)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
     # instantiate loss
     criterion = nn.BCELoss()
 
     # select either MLP or LSTM as model
     if args.model_type == "MLP":
-        model = MlpClassifier(vectors_store, args).to(device)
+        model = MlpClassifier(vectors_store, args).to(args.device)
     elif args.model_type == "LSTM":
-        model = LstmClassifier(vectors_store, args).to(device)
+        model = LstmClassifier(vectors_store, args).to(args.device)
     elif args.model_type == "BILINEAR":
-        model = BilinearClassifier(vectors_store, args).to(device)
+        model = BilinearClassifier(vectors_store, args).to(args.device)
 
     # instantiate optimizer
     optimizer = torch.optim.Adam(
@@ -162,7 +160,7 @@ if __name__ == "__main__":
     # start training
     losses, accuracies = fit(
         epochs=args.num_epochs,
-        device=device,
+        device=args.device,
         save_wandb=args.save_wandb,
         model=model,
         criterion=criterion,

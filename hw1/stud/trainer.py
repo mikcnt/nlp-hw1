@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -7,9 +7,8 @@ import wandb
 from utils import Checkpoint
 
 
-def batch_to_device(batch: List[torch.Tensor], device: str) -> List[torch.Tensor]:
+def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:
     return {key: value.to(device) for key, value in batch.items()}
-    # return [x.to(device) for x in batch]
 
 
 def fit(
