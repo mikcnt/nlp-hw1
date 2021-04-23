@@ -25,7 +25,7 @@ from trainer import fit
 @dataclass
 class Args:
     # wandb
-    save_wandb = False
+    save_wandb = True
 
     # general parameters
     num_epochs = 15
@@ -45,7 +45,7 @@ class Args:
     use_pos = False
 
     # MLP Parameters
-    if model_type == "MLP" or model_type == "BILINEAR":
+    if model_type == "MLP":
         mlp_n_features = 300
         mlp_num_layers = 2
         mlp_n_hidden = 512
@@ -58,6 +58,11 @@ class Args:
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
+    
+    if model_type == "BILINEAR":
+        bi_n_features = 300
+        bi_n_hidden = 400
+        bi_dropout = 0.3
 
     # POS parameters
     if use_pos:

@@ -168,7 +168,18 @@ def config_wandb(args, model: nn.Module) -> None:
     config.weight_decay = args.weight_decay
     config.model_type = args.model_type
     config.vocab_threshold = args.vocab_threshold
-
+    
+    # pos parameters
+    config.use_pos = args.use_pos
+    if args.use_pos:
+        config.pos_embedding_size = args.pos_embedding_size
+        config.pos_vocab_size = args.pos_vocab_size
+        if args.model_type == "LSTM":
+            config.pos_n_hidden = args.pos_n_hidden
+            config.pos_num_layers = args.pos_num_layers
+            config.pos_bidirectional = args.pos_bidirectional
+            config.pos_dropout = args.pos_dropout
+    
     # mlp parameters
     if args.model_type == "MLP":
         config.mlp_n_features = args.mlp_n_features
@@ -183,14 +194,12 @@ def config_wandb(args, model: nn.Module) -> None:
         config.sentence_num_layers = args.sentence_num_layers
         config.sentence_bidirectional = args.sentence_bidirectional
         config.sentence_dropout = args.sentence_dropout
-        config.use_pos = args.use_pos
-        if args.use_pos:
-            config.pos_embedding_size = args.pos_embedding_size
-            config.pos_vocab_size = args.pos_vocab_size
-            config.pos_n_hidden = args.pos_n_hidden
-            config.pos_num_layers = args.pos_num_layers
-            config.pos_bidirectional = args.pos_bidirectional
-            config.pos_dropout = args.pos_dropout
+    
+    if args.model_type == "BILINEAR":
+        config.bi_n_features = args.bi_n_features
+        config.bi_n_hidden = args.bi_n_hidden
+        config.bi_n_dropout = args.bi_dropout
+    
 
     # parameter for wandb update
     config.log_interval = 1

@@ -180,7 +180,7 @@ class BilinearClassifier(nn.Module):
             padding_idx=0,
         )
 
-        linear_features = args.mlp_n_features
+        linear_features = args.bi_n_features
 
         # POS embedding
         if args.use_pos:
@@ -190,32 +190,32 @@ class BilinearClassifier(nn.Module):
 
         ####### CLASSIFICATION HEAD #######
         self.bilinear_layer = nn.Bilinear(
-            linear_features, linear_features, args.mlp_n_hidden
+            linear_features, linear_features, args.bi_n_hidden
         )
 
         if args.use_pos:
             self.pos_bilinear_layer = nn.Bilinear(
-                args.pos_embedding_size, args.pos_embedding_size, args.mlp_n_hidden
+                args.pos_embedding_size, args.pos_embedding_size, args.bi_n_hidden
             )
             self.last_bilinear_layer = nn.Bilinear(
-                args.mlp_n_hidden, args.mlp_n_hidden, args.mlp_n_hidden
+                args.bi_n_hidden, args.bi_n_hidden, args.bi_n_hidden
             )
 
         self.activation = nn.ReLU()
 
-        self.dropout = nn.Dropout(args.mlp_dropout)
+        self.dropout = nn.Dropout(args.bi_dropout)
 
         if not args.use_pos:
             self.middle_layer = nn.Linear(
-                in_features=args.mlp_n_hidden,
-                out_features=args.mlp_n_hidden,
+                in_features=args.bi_n_hidden,
+                out_features=args.bi_n_hidden,
             )
         else:
             self.middle_layer = nn.Bilinear(
-                args.mlp_n_hidden, args.mlp_n_hidden, args.mlp_n_hidden
+                args.bi_n_hidden, args.bi_n_hidden, args.bi_n_hidden
             )
 
-        self.last_layer = nn.Linear(in_features=args.mlp_n_hidden, out_features=1)
+        self.last_layer = nn.Linear(in_features=args.bi_n_hidden, out_features=1)
 
         self.sigmoid = nn.Sigmoid()
 
