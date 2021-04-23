@@ -25,11 +25,11 @@ from trainer import fit
 @dataclass
 class Args:
     # wandb
-    save_wandb = True
+    save_wandb = False
 
     # general parameters
     num_epochs = 15
-    batch_size = 64
+    batch_size = 8
     lr = 0.0001
     weight_decay = 0.0001
     vocab_threshold = 0
@@ -41,7 +41,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILINEAR"
+    model_type = "LSTM"
     use_pos = False
 
     # MLP Parameters
@@ -62,7 +62,7 @@ class Args:
     if model_type == "BILINEAR":
         bi_n_features = 300
         bi_n_hidden = 400
-        bi_dropout = 0.3
+        bi_dropout = 0.4
 
     # POS parameters
     if use_pos:
