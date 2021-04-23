@@ -110,8 +110,8 @@ class MlpClassifier(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
-        sentence1 = batch["sentence1"].to(self.args.device)
-        sentence2 = batch["sentence2"].to(self.args.device)
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
 
         # compute sentences length
         lengths1 = text_length(sentence1)
@@ -131,8 +131,8 @@ class MlpClassifier(nn.Module):
 
         # use pos embeddings
         if self.args.use_pos:
-            pos1 = batch["pos1"].to(self.args.device)
-            pos2 = batch["pos2"].to(self.args.device)
+            pos1 = batch["pos1"]
+            pos2 = batch["pos2"]
             pos_embedding1 = self.embedding_pos(pos1)
             pos_embedding2 = self.embedding_pos(pos2)
             pos_embedding1 = self._forward_embedding(pos_embedding1, lengths1)
@@ -219,11 +219,8 @@ class BilinearClassifier(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
-        sentence1 = batch["sentence1"].to(self.args.device)
-        sentence2 = batch["sentence2"].to(self.args.device)
-
-        pos1 = batch["pos1"]
-        pos2 = batch["pos2"]
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
 
         # compute sentences length
         lengths1 = text_length(sentence1)
@@ -240,6 +237,8 @@ class BilinearClassifier(nn.Module):
 
         # use pos embeddings
         if self.args.use_pos:
+            pos1 = batch["pos1"]
+            pos2 = batch["pos2"]
             pos_embedding1 = self.embedding_pos(pos1)
             pos_embedding2 = self.embedding_pos(pos2)
             pos_embedding1 = self._forward_embedding(pos_embedding1, lengths1)
@@ -485,8 +484,8 @@ class LstmClassifier(nn.Module):
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
         # extract elements from batch
-        sentence1 = batch["sentence1"].to(self.args.device)
-        sentence2 = batch["sentence2"].to(self.args.device)
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
 
         # compute sentences length
         lengths1 = text_length(sentence1).to("cpu")

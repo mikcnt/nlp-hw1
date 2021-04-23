@@ -7,9 +7,8 @@ import wandb
 from utils import Checkpoint
 
 
-# def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:
-#     return {key: value.to(device) for key, value in batch.items()}
-#     # return [x.to(device) for x in batch]
+def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:
+    return {key: value.to(device) for key, value in batch.items()}
 
 
 def fit(
@@ -47,7 +46,7 @@ def fit(
         )
         for batch in train_iterator:
             # send batch to device
-            # batch = batch_to_device(batch, device)
+            batch = batch_to_device(batch, device)
 
             pred = model(batch)
 

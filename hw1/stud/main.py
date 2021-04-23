@@ -30,7 +30,7 @@ class Args:
 
     # general parameters
     num_epochs = 15
-    batch_size = 8
+    batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
     vocab_threshold = 0
