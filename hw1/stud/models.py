@@ -69,7 +69,8 @@ class MlpClassifier(nn.Module):
     ) -> None:
         super().__init__()
         self.args = args
-        # Embeddings
+        ####### EMBEDDING LAYERS #######
+        # sentence embedding
         self.embedding = nn.Embedding.from_pretrained(
             vectors_store,
             padding_idx=0,
@@ -88,6 +89,7 @@ class MlpClassifier(nn.Module):
             in_features=linear_features, out_features=args.mlp_n_hidden
         )
 
+        ####### CLASSIFICATION HEAD #######
         self.layers = nn.ModuleList()
         for i in range(args.mlp_num_layers):
             self.layers.append(
@@ -98,7 +100,6 @@ class MlpClassifier(nn.Module):
             )
 
         self.activation = nn.ReLU()
-        # self.activation = activation
 
         self.dropout = nn.Dropout(args.mlp_dropout)
 
@@ -149,6 +150,115 @@ class MlpClassifier(nn.Module):
             out = self.activation(out)
             out = self.dropout(out)
         # final linear layer
+        out = self.last_layer(out)
+        out = self.sigmoid(out)
+        return out.squeeze(-1)
+
+    def _forward_embedding(
+        self, embeddings: torch.Tensor, lengths: torch.Tensor
+    ) -> torch.Tensor:
+        mask = (
+            torch.arange(embeddings.shape[1], device=embeddings.device)
+            < lengths[..., None]
+        )
+        # compute mean of embeddings (excluding padded elements)
+        embeddings = (embeddings * mask.unsqueeze(-1)).sum(1) / lengths.unsqueeze(-1)
+        return embeddings
+
+
+class BilinearClassifier(nn.Module):
+    def __init__(
+        self,
+        vectors_store: List[torch.Tensor],
+        args,
+    ) -> None:
+        super().__init__()
+        self.args = args
+        ####### EMBEDDING LAYERS #######
+        self.embedding = nn.Embedding.from_pretrained(
+            vectors_store,
+            padding_idx=0,
+        )
+
+        linear_features = args.mlp_n_features
+
+        # POS embedding
+        if args.use_pos:
+            self.embedding_pos = nn.Embedding(
+                args.pos_vocab_size, args.pos_embedding_size, padding_idx=0
+            )
+
+        ####### CLASSIFICATION HEAD #######
+        self.bilinear_layer = nn.Bilinear(
+            linear_features, linear_features, args.mlp_n_hidden
+        )
+
+        if args.use_pos:
+            self.pos_bilinear_layer = nn.Bilinear(
+                args.pos_embedding_size, args.pos_embedding_size, args.mlp_n_hidden
+            )
+            self.last_bilinear_layer = nn.Bilinear(
+                args.mlp_n_hidden, args.mlp_n_hidden, args.mlp_n_hidden
+            )
+
+        self.activation = nn.ReLU()
+
+        self.dropout = nn.Dropout(args.mlp_dropout)
+
+        if not args.use_pos:
+            self.middle_layer = nn.Linear(
+                in_features=args.mlp_n_hidden,
+                out_features=args.mlp_n_hidden,
+            )
+        else:
+            self.middle_layer = nn.Bilinear(
+                args.mlp_n_hidden, args.mlp_n_hidden, args.mlp_n_hidden
+            )
+
+        self.last_layer = nn.Linear(in_features=args.mlp_n_hidden, out_features=1)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
+        sentence1 = batch["sentence1"]
+        sentence2 = batch["sentence2"]
+
+        pos1 = batch["pos1"]
+        pos2 = batch["pos2"]
+
+        # compute sentences length
+        lengths1 = text_length(sentence1)
+        lengths2 = text_length(sentence2)
+
+        # text embeddings
+        embeddings1 = self.embedding(sentence1)
+        embeddings2 = self.embedding(sentence2)
+
+        # compute the aggregation (i.e., mean) of the embeddings
+        # only taking into consideration non-padding values
+        embeddings1 = self._forward_embedding(embeddings1, lengths1)
+        embeddings2 = self._forward_embedding(embeddings2, lengths2)
+
+        # use pos embeddings
+        if self.args.use_pos:
+            pos_embedding1 = self.embedding_pos(pos1)
+            pos_embedding2 = self.embedding_pos(pos2)
+            pos_embedding1 = self._forward_embedding(pos_embedding1, lengths1)
+            pos_embedding2 = self._forward_embedding(pos_embedding2, lengths2)
+            pos_out = self.pos_bilinear_layer(pos_embedding1, pos_embedding2)
+            pos_out = self.activation(pos_out)
+            pos_out = self.dropout(pos_out)
+
+
+        out = self.bilinear_layer(embeddings1, embeddings2)
+        out = self.activation(out)
+        out = self.dropout(out)
+        if self.args.use_pos:
+            out = self.middle_layer(out, pos_out)
+        else:
+            out = self.middle_layer(out)
+        out = self.activation(out)
+        out = self.dropout(out)
         out = self.last_layer(out)
         out = self.sigmoid(out)
         return out.squeeze(-1)

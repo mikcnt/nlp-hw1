@@ -18,7 +18,7 @@ from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from datasets.mlp_dataset import EmbeddedDataset
 from datasets.lstm_dataset import IndicesDataset
 from datasets.pos import pos_all_tags
-from models import MlpClassifier, LstmClassifier
+from models import MlpClassifier, LstmClassifier, BilinearClassifier
 from trainer import fit
 
 
@@ -41,11 +41,11 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "MLP"
+    model_type = "BILINEAR"
     use_pos = False
 
     # MLP Parameters
-    if model_type == "MLP":
+    if model_type == "MLP" or model_type == "BILINEAR":
         mlp_n_features = 300
         mlp_num_layers = 2
         mlp_n_hidden = 512
@@ -137,6 +137,8 @@ if __name__ == "__main__":
         model = MlpClassifier(vectors_store, args).to(device)
     elif args.model_type == "LSTM":
         model = LstmClassifier(vectors_store, args).to(device)
+    elif args.model_type == "BILINEAR":
+        model = BilinearClassifier(vectors_store, args).to(device)
 
     # instantiate optimizer
     optimizer = torch.optim.Adam(
