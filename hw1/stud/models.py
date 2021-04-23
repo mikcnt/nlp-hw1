@@ -475,11 +475,11 @@ class LstmClassifier(nn.Module):
             )
 
         ####### CLASSIFICATION HEAD #######
-        self.bilinear_layer = torch.nn.Bilinear(recurrent_output_size, recurrent_output_size, recurrent_output_size)
+        self.bilinear_layer = torch.nn.Bilinear(recurrent_output_size, recurrent_output_size, recurrent_output_size // 2)
         self.lin1 = torch.nn.Linear(recurrent_output_size, recurrent_output_size)
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(0.3)
-        self.lin2 = torch.nn.Linear(recurrent_output_size, 1)
+        self.lin2 = torch.nn.Linear(recurrent_output_size // 2, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
@@ -503,7 +503,7 @@ class LstmClassifier(nn.Module):
         )
 
         # concatenate sentence lstm outputs
-        out = torch.cat((sentence_lstm_out1, sentence_lstm_out2), dim=-1)
+        # out = torch.cat((sentence_lstm_out1, sentence_lstm_out2), dim=-1)
 
         # pos embedding and LSTM
         if self.args.use_pos:
@@ -520,7 +520,7 @@ class LstmClassifier(nn.Module):
             )
 
             # concatenate previous output and lstm outputs on pos embeddings
-            out = torch.cat((out, sentence_lstm_out1, sentence_lstm_out2), dim=-1)
+            # out = torch.cat((out, sentence_lstm_out1, sentence_lstm_out2), dim=-1)
 
         # linear pass
         out = self.bilinear_layer(sentence_lstm_out1, sentence_lstm_out2)
