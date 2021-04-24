@@ -1,25 +1,29 @@
-import string
 import random
+import string
+from dataclasses import dataclass
+
 import numpy as np
 import torch
 from torch import nn
 
-from dataclasses import dataclass
-
 import wandb
-from utils import (
+from stud.datasets.lstm_dataset import WiCDataset, read_data
+from stud.datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
+from stud.datasets.pos import pos_all_tags
+from stud.models import (
+    BilinearClassifier,
+    LstmBilinearClassifier,
+    LstmClassifier,
+    MlpClassifier,
+)
+from stud.trainer import fit
+from stud.utils import (
+    Checkpoint,
+    config_wandb,
     embeddings_dictionary,
     index_dictionary,
-    Checkpoint,
     word_vectors_most_common,
-    config_wandb,
 )
-from datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
-from datasets.mlp_dataset import EmbeddedDataset
-from datasets.lstm_dataset import IndicesDataset
-from datasets.pos import pos_all_tags
-from models import MlpClassifier, LstmClassifier, BilinearClassifier, LstmBilinearClassifier
-from trainer import fit
 
 
 @dataclass
@@ -36,6 +40,7 @@ class Args:
     vocab_threshold = 0
 
     # dataset parameters
+    save_labels = True
     remove_stopwords = True
     remove_digits = True
     remove_target_word = False
@@ -59,7 +64,7 @@ class Args:
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
-    
+
     if model_type == "BILINEAR":
         bi_n_features = 300
         bi_n_hidden = 400
@@ -113,14 +118,17 @@ if __name__ == "__main__":
     marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
     # create train and validation datasets
-    train_dataset = IndicesDataset(
-        dataset_path=train_path,
+    train_data = read_data(train_path)
+    val_data = read_data(dev_path)
+
+    train_dataset = WiCDataset(
+        data=train_data,
         word_index=word_index,
         marker=marker,
         args=args,
     )
-    val_dataset = IndicesDataset(
-        dataset_path=dev_path,
+    val_dataset = WiCDataset(
+        data=val_data,
         word_index=word_index,
         marker=marker,
         args=args,
@@ -151,7 +159,7 @@ if __name__ == "__main__":
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
-    checkpoint = None  # Checkpoint(path="checkpoints/rnn")
+    checkpoint = Checkpoint(path="checkpoints/bilinear")
 
     # save current training on wandb
     if args.save_wandb:

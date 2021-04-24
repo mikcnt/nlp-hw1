@@ -1,21 +1,21 @@
-import pickle
 import os
-from collections import defaultdict, Counter
+import pickle
+from collections import Counter, defaultdict
+from typing import Dict, List, Tuple
+
 import jsonlines
 import torch
 from torch import nn
 from tqdm import tqdm
 
 import wandb
+from stud.datasets.data_processing import preprocess
 
-from typing import Dict, Tuple, List
-
-from datasets.data_processing import preprocess
 
 # save/load pickle
 def save_pickle(data: dict, path: str) -> None:
     with open(path, "wb") as f:
-        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(data, f)
 
 
 def load_pickle(path: str) -> dict:
@@ -167,7 +167,7 @@ def config_wandb(args, model: nn.Module) -> None:
     config.weight_decay = args.weight_decay
     config.model_type = args.model_type
     config.vocab_threshold = args.vocab_threshold
-    
+
     # pos parameters
     config.use_pos = args.use_pos
     if args.use_pos:
@@ -178,7 +178,7 @@ def config_wandb(args, model: nn.Module) -> None:
             config.pos_num_layers = args.pos_num_layers
             config.pos_bidirectional = args.pos_bidirectional
             config.pos_dropout = args.pos_dropout
-    
+
     # mlp parameters
     if args.model_type == "MLP":
         config.mlp_n_features = args.mlp_n_features
@@ -193,12 +193,11 @@ def config_wandb(args, model: nn.Module) -> None:
         config.sentence_num_layers = args.sentence_num_layers
         config.sentence_bidirectional = args.sentence_bidirectional
         config.sentence_dropout = args.sentence_dropout
-    
+
     if args.model_type == "BILINEAR":
         config.bi_n_features = args.bi_n_features
         config.bi_n_hidden = args.bi_n_hidden
         config.bi_n_dropout = args.bi_dropout
-    
 
     # parameter for wandb update
     config.log_interval = 1

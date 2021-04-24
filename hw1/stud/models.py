@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from typing import List, Tuple, Optional, Dict, Callable
-from utils import cosine_similarity
+from stud.utils import cosine_similarity
 
 
 def text_length(sentences: torch.Tensor) -> torch.Tensor:
