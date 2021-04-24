@@ -1,10 +1,11 @@
-from typing import List, Optional, Any, Dict
+from typing import Any, Dict, List, Optional
+
 import torch
 from torch import nn
 from tqdm import tqdm
-import wandb
 
-from utils import Checkpoint
+import wandb
+from stud.utils import Checkpoint
 
 
 def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:

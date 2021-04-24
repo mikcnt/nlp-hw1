@@ -1,14 +1,13 @@
+import re
 from typing import List, Tuple
 
-import re
-
 import nltk
-from nltk.corpus import stopwords
-
 import torch
+from nltk.corpus import stopwords
+from stud.datasets.pos import pos_indexes
 
-from .pos import pos_indexes
-
+nltk.data.path.append("model/nltk_data")
+nltk.download("stopwords")
 set_stopwords = set(stopwords.words())
 
 
