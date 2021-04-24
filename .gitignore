@@ -1,6 +1,7 @@
 .virtual_documents
 .ipynb_checkpoints
 __pycache__
+.idea
 
 wandb
 
