@@ -6,9 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 
-import wandb
 from stud.datasets.lstm_dataset import WiCDataset, read_data
-from stud.datasets.manual_embedding import AverageEmbedder, WeightedAverageEmbedder
 from stud.datasets.pos import pos_all_tags
 from stud.models import (
     BilinearClassifier,

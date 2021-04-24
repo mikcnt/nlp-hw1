@@ -1,4 +1,3 @@
-import os
 import pickle
 import random
 import string
@@ -12,6 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from stud.datasets.lstm_dataset import WiCDataset
+from stud.datasets.pos import pos_all_tags
 from stud.models import BilinearClassifier
 from stud.utils import index_dictionary, load_pickle
 
@@ -124,14 +124,13 @@ class StudentModel:
         # dataset utils
         self.marker = "".join(random.choices(string.ascii_lowercase, k=20))
 
-    def predict(self, sentence_pairs: List[Dict]) -> List[Dict]:
+    def predict(self, sentence_pairs: List[Dict]) -> List[str]:
         dataset = WiCDataset(sentence_pairs, self.word_index, self.marker, self.args)
-        loader = DataLoader(dataset, batch_size=1)
+        loader = DataLoader(dataset, batch_size=32)
         predicted = []
         for batch in loader:
             batch = batch_to_device(batch, self.args.device)
             pred = self.model(batch).round()
             predicted.append(pred)
         predicted = torch.stack(predicted, dim=0)
-        # raise AssertionError("AOOOOOOOO {} AOOOOOOOOO".format(predicted))
         return [str(bool(x)) for x in predicted]
