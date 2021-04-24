@@ -1,43 +1,35 @@
 from typing import List, Dict
 
-import torch
-from torch import nn
+class Model:
 
-class Model(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        n_features = 600
-        num_layers = 5
-        hidden_dim = 150
-
-        self.first_layer = nn.Linear(in_features=n_features, out_features=hidden_dim)
-
-        self.layers = (
-            nn.ModuleList()
-        )
-
-        for _ in range(num_layers):
-            self.layers.append(
-                nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
-            )
-        self.activation = torch.nn.functional.relu
-        self.last_layer = nn.Linear(in_features=hidden_dim, out_features=1)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, meshgrid: torch.Tensor) -> torch.Tensor:
-        out = meshgrid
-
-        out = self.first_layer(
-            out
-        )
-        for layer in self.layers:  # Apply `k` (linear, activation) layer
-            out = layer(out)
-            out = self.activation(out)
-            # out = self.batchnorm(out)
-            # out = nn.Dropout(p=0.2)(out)
-        out = self.last_layer(
-            out
-        )  # Last linear layer to bring the `hiddem_dim` features to a binary space (`True`/`False`)
-        
-        out = self.sigmoid(out)
-        return out.squeeze(-1)
+    def predict(self, sentence_pairs: List[Dict]) -> List[str]:
+        """
+        A simple wrapper for your model
+        Args:
+            sentence_pairs: list of dicts of strings. The outer list represents the samples, the inner one a dictionary with sentence pairs and extra information such as the lemma for WiC and the indexes in context in the two sentences.
+            within it. Ex: [{
+                                'id': 'test.X',
+                                'lemma': 'dolor',
+                                'pos': 'XX',
+                                'sentence1': 'Lorem ipsum dolor sit amet.',
+                                'sentence2': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+                                'start1': '12',
+                                'end1': '17',
+                                'start2': '16',
+                                'end2': '21'
+                            }, 
+                            {
+                                'id': 'test.X+1',
+                                'lemma': 'dolor',
+                                'pos': 'XX',
+                                'sentence1': 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+                                'sentence2': 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+                                'start1': '46',
+                                'end1': '52',
+                                'start2': '16',
+                                'end2': '21'} ]
+        Returns:
+            list of predictions associated to each sentence pair.
+            Ex: Ex: [ "True", "False" ]
+        """
+        raise NotImplementedError
