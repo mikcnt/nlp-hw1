@@ -93,16 +93,16 @@ def embeddings_dictionary(
 
 
 def index_dictionary(
-    word_vectors: Dict[str, torch.Tensor]
+    word_vectors: Dict[str, torch.Tensor], embedding_size=300
 ) -> Tuple[Dict[str, int], List[torch.Tensor]]:
     word_index = dict()
     vectors_store = []
 
     # pad token, index = 0
-    vectors_store.append(torch.rand(300))
+    vectors_store.append(torch.rand(embedding_size))
 
     # unk token, index = 1
-    vectors_store.append(torch.rand(300))
+    vectors_store.append(torch.rand(embedding_size))
 
     # save index for each word
     for word, vector in word_vectors.items():

@@ -28,7 +28,7 @@ from stud.utils import (
 @dataclass
 class Args:
     # wandb
-    save_wandb = True
+    save_wandb = False
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
@@ -37,6 +37,7 @@ class Args:
     lr = 0.0001
     weight_decay = 0.0001
     vocab_threshold = 0
+    sentence_embedding_size = 300
 
     # dataset parameters
     save_labels = True
