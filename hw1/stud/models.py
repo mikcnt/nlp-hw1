@@ -475,11 +475,11 @@ class LstmBilinearClassifier(nn.Module):
 
         ####### CLASSIFICATION HEAD #######
         self.bilinear_layer = nn.Bilinear(
-            recurrent_output_size, recurrent_output_size, recurrent_output_size // 2
+            recurrent_output_size, recurrent_output_size, args.sentence_n_hidden
         )
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(0.3)
-        self.final_layer = nn.Linear(recurrent_output_size // 2, 1)
+        self.final_layer = nn.Linear(args.sentence_n_hidden, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:

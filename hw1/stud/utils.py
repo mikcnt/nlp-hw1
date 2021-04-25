@@ -83,8 +83,8 @@ def embeddings_dictionary(
             if i == 0 and skip_first:
                 continue
             # for tests
-            # if i == 10000:
-            #     break
+            if i == 10000:
+                break
             word, *vector = line.strip().split(" ")
             vector = torch.tensor([float(c) for c in vector])
 

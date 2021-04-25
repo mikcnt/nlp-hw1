@@ -13,6 +13,7 @@ from stud.models import (
     LstmBilinearClassifier,
     LstmClassifier,
     MlpClassifier,
+    LstmBilinearClassifier,
 )
 from stud.trainer import fit
 from stud.utils import (
@@ -45,7 +46,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILINEAR"
+    model_type = "BILSTM"
     use_pos = False
 
     # MLP Parameters
@@ -59,6 +60,14 @@ class Args:
     if model_type == "LSTM":
         sentence_embedding_size = 300
         sentence_n_hidden = 512
+        sentence_num_layers = 2
+        sentence_bidirectional = True
+        sentence_dropout = 0.3
+    
+    # LSTM with bilinear Parameters
+    if model_type == "BILSTM":
+        sentence_embedding_size = 300
+        sentence_n_hidden = 400
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
@@ -134,9 +143,9 @@ if __name__ == "__main__":
 
     # create dataloaders
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=64, shuffle=True
+        train_dataset, batch_size=args.batch_size, shuffle=True
     )
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     # instantiate loss
     criterion = nn.BCELoss()
@@ -148,6 +157,8 @@ if __name__ == "__main__":
         model = LstmClassifier(vectors_store, args).to(args.device)
     elif args.model_type == "BILINEAR":
         model = BilinearClassifier(vectors_store, args).to(args.device)
+    elif args.model_type == "BILSTM":
+        model = LstmBilinearClassifier(vectors_store, args).to(args.device)
 
     # instantiate optimizer
     optimizer = torch.optim.Adam(
@@ -157,7 +168,7 @@ if __name__ == "__main__":
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
-    checkpoint = Checkpoint(path="checkpoints/bilinear")
+    checkpoint = None #Checkpoint(path="checkpoints/bilinear")
 
     # save current training on wandb
     if args.save_wandb:
