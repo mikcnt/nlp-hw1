@@ -173,12 +173,9 @@ class BilinearClassifier(nn.Module):
         super().__init__()
         self.args = args
         ####### EMBEDDING LAYERS #######
-        # self.embedding = nn.Embedding.from_pretrained(
-        #     vectors_store,
-        #     padding_idx=0,
-        # )
-        self.embedding = nn.Embedding(
-            len(vectors_store), args.bi_n_features,
+        # sentences embedding
+        self.embedding = nn.Embedding.from_pretrained(
+            vectors_store,
             padding_idx=0,
         )
 
