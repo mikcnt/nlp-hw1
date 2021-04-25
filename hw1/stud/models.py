@@ -361,6 +361,7 @@ class LstmClassifier(nn.Module):
 
         # concatenate sentence lstm outputs
         out = torch.cat((sentence_lstm_out1, sentence_lstm_out2), dim=-1)
+        out = self.dropout(out)
 
         # pos embedding and LSTM
         if self.args.use_pos:
