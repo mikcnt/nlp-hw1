@@ -28,7 +28,7 @@ from stud.utils import (
 @dataclass
 class Args:
     # wandb
-    save_wandb = False
+    save_wandb = True
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
@@ -46,7 +46,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILSTM"
+    model_type = "BILINEAR"
     use_pos = False
 
     # MLP Parameters
@@ -67,7 +67,7 @@ class Args:
     # LSTM with bilinear Parameters
     if model_type == "BILSTM":
         sentence_embedding_size = 300
-        sentence_n_hidden = 400
+        sentence_n_hidden = 512
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3

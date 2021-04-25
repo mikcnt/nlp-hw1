@@ -8,6 +8,7 @@ from stud.datasets.pos import pos_indexes
 
 nltk.data.path.append("model/nltk_data")
 nltk.download("stopwords")
+nltk.download("averaged_perceptron_tagger")
 set_stopwords = set(stopwords.words())
 
 

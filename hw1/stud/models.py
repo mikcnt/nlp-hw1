@@ -204,15 +204,15 @@ class BilinearClassifier(nn.Module):
 
         self.dropout = nn.Dropout(args.bi_dropout)
 
-        if not args.use_pos:
-            self.middle_layer = nn.Linear(
-                in_features=args.bi_n_hidden,
-                out_features=args.bi_n_hidden,
-            )
-        else:
-            self.middle_layer = nn.Bilinear(
+        if args.use_pos:
+            self.pos_bilinear = nn.Bilinear(
                 args.bi_n_hidden, args.bi_n_hidden, args.bi_n_hidden
             )
+
+        self.fc = nn.Linear(
+            in_features=args.bi_n_hidden,
+            out_features=args.bi_n_hidden,
+        )
 
         self.last_layer = nn.Linear(in_features=args.bi_n_hidden, out_features=1)
 
@@ -250,11 +250,10 @@ class BilinearClassifier(nn.Module):
         out = self.bilinear_layer(embeddings1, embeddings2)
         out = self.activation(out)
         out = self.dropout(out)
-        
+
         if self.args.use_pos:
-            out = self.middle_layer(out, pos_out)
-        else:
-            out = self.middle_layer(out)
+            out = self.pos_bilinear(out, pos_out)
+        out = self.fc(out)
         out = self.activation(out)
         out = self.dropout(out)
         out = self.last_layer(out)
@@ -264,11 +263,12 @@ class BilinearClassifier(nn.Module):
     def _forward_embedding(
         self, embeddings: torch.Tensor, lengths: torch.Tensor
     ) -> torch.Tensor:
+        # create mask to compute mean excluding embeddings of pad index
         mask = (
             torch.arange(embeddings.shape[1], device=embeddings.device)
             < lengths[..., None]
         )
-        # compute mean of embeddings (excluding padded elements)
+        # compute mean
         embeddings = (embeddings * mask.unsqueeze(-1)).sum(1) / lengths.unsqueeze(-1)
         return embeddings
 
@@ -369,15 +369,11 @@ class LstmClassifier(nn.Module):
             pos_embedding1 = self.embedding_pos(pos1)
             pos_embedding2 = self.embedding_pos(pos2)
 
-            sentence_lstm_out1 = self._rnn_forward(
-                self.rnn_pos, pos_embedding1, lengths1
-            )
-            sentence_lstm_out2 = self._rnn_forward(
-                self.rnn_pos, pos_embedding2, lengths2
-            )
+            pos_lstm_out1 = self._rnn_forward(self.rnn_pos, pos_embedding1, lengths1)
+            pos_lstm_out2 = self._rnn_forward(self.rnn_pos, pos_embedding2, lengths2)
 
             # concatenate previous output and lstm outputs on pos embeddings
-            out = torch.cat((out, sentence_lstm_out1, sentence_lstm_out2), dim=-1)
+            out = torch.cat((out, pos_lstm_out1, pos_lstm_out2), dim=-1)
 
         # linear pass
         out = self.lin1(out)
@@ -465,13 +461,15 @@ class LstmBilinearClassifier(nn.Module):
                 batch_first=True,
             )
 
-            pos_recurrent_output_size += (
+            pos_recurrent_output_size = (
                 args.pos_n_hidden
                 if not args.pos_bidirectional
                 else args.pos_n_hidden * 2
             )
 
-            self.pos_bilinear_layer = nn.Bilinear()
+            self.pos_bilinear_layer = nn.Bilinear(
+                pos_recurrent_output_size, pos_recurrent_output_size, args.pos_n_hidden
+            )
 
         ####### CLASSIFICATION HEAD #######
         self.bilinear_layer = nn.Bilinear(
@@ -509,14 +507,10 @@ class LstmBilinearClassifier(nn.Module):
             pos_embedding1 = self.embedding_pos(pos1)
             pos_embedding2 = self.embedding_pos(pos2)
 
-            sentence_lstm_out1 = self._rnn_forward(
-                self.rnn_pos, pos_embedding1, lengths1
-            )
-            sentence_lstm_out2 = self._rnn_forward(
-                self.rnn_pos, pos_embedding2, lengths2
-            )
+            pos_lstm_out1 = self._rnn_forward(self.rnn_pos, pos_embedding1, lengths1)
+            pos_lstm_out2 = self._rnn_forward(self.rnn_pos, pos_embedding2, lengths2)
 
-        # bilinear/linear pass
+        # bilinear and fully connected pass
         out = self.bilinear_layer(sentence_lstm_out1, sentence_lstm_out2)
         out = self.activation(out)
         out = self.dropout(out)

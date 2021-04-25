@@ -37,7 +37,7 @@ def fit(
     for epoch in range(1, epochs + 1):
         # instantiate loss and accuracy each epoch
         losses_train = 0
-        d_train, n_train = 0, 0
+        train_total_instances, train_correct_instances = 0, 0
 
         model.train()
         train_iterator = (
@@ -60,14 +60,14 @@ def fit(
 
             pred = torch.round(pred)
             # number of predictions
-            d_train += pred.shape[0]
+            train_total_instances += pred.shape[0]
             # number of correct predictions
-            n_train += (batch["label"] == pred).int().sum().item()
+            train_correct_instances += (batch["label"] == pred).int().sum().item()
 
         model.eval()
         with torch.no_grad():
             losses_val = 0
-            d_val, n_val = 0, 0
+            val_total_instances, val_correct_instances = 0, 0
 
             valid_iterator = (
                 tqdm(valid_dl, desc=f"Epoch {epoch}/{epochs} (VALID)", leave=False)
@@ -87,19 +87,19 @@ def fit(
 
                 pred_val = torch.round(pred_val)
                 # number of predictions
-                d_val += pred_val.shape[0]
+                val_total_instances += pred_val.shape[0]
                 # number of correct predictions
-                n_val += (batch["label"] == pred_val).int().sum().item()
+                val_correct_instances += (batch["label"] == pred_val).int().sum().item()
 
         if scheduler is not None:
             scheduler.step()
 
         # compute accuracy (train + val)
-        loss_train = losses_train / d_train
-        loss_val = losses_val / d_val
+        loss_train = losses_train / len(train_dl)
+        loss_val = losses_val / len(valid_dl)
 
-        acc_train = n_train / d_train
-        acc_val = n_val / d_val
+        acc_train = train_correct_instances / train_total_instances
+        acc_val = val_correct_instances / val_total_instances
 
         # log losses and accuracies
         losses["train"].append(loss_train)
