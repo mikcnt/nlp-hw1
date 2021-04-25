@@ -361,7 +361,6 @@ class LstmClassifier(nn.Module):
 
         # concatenate sentence lstm outputs
         out = torch.cat((sentence_lstm_out1, sentence_lstm_out2), dim=-1)
-        out = self.dropout(out)
 
         # pos embedding and LSTM
         if self.args.use_pos:
@@ -476,6 +475,7 @@ class LstmBilinearClassifier(nn.Module):
         )
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(0.3)
+        self.middle_layer = nn.Linear(args.sentence_n_hidden, args.sentence_n_hidden)
         self.final_layer = nn.Linear(args.sentence_n_hidden, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -513,7 +513,11 @@ class LstmBilinearClassifier(nn.Module):
         out = self.bilinear_layer(sentence_lstm_out1, sentence_lstm_out2)
         out = self.activation(out)
         out = self.dropout(out)
-
+        
+        out = self.middle_layer(out)
+        out = self.activation(out)
+        out = self.dropout(out)
+        
         out = self.final_layer(out).squeeze(1)
         out = self.sigmoid(out)
 
