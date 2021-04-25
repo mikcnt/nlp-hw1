@@ -205,9 +205,3 @@ def config_wandb(args, model: nn.Module) -> None:
     # save model parameters
     wandb.watch(model, log="all")
     return
-
-
-def cosine_similarity(v1: torch.Tensor, v2: torch.Tensor) -> torch.Tensor:
-    num = torch.sum(v1 * v2, dim=1)
-    den = torch.linalg.norm(v1, dim=1) * torch.linalg.norm(v2, dim=1)
-    return num / den

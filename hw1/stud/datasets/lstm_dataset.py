@@ -122,7 +122,7 @@ class WiCDataset(torch.utils.data.Dataset):
 
         # data = dictionaries containing
         # indexes for sentence1, sentence2, lemma1, lemma2
-        # and label
+        # and label (if not in testing mode)
         if self.args.save_labels:
             self.dataset = {
                 idx: {
