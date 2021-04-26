@@ -13,53 +13,7 @@ def text_length(sentences: torch.Tensor) -> torch.Tensor:
     return lengths
 
 
-# MLP baseline model
-class MLP(nn.Module):
-    def __init__(
-        self,
-        n_features: int,
-        num_layers: int,
-        hidden_dim: int,
-        activation: Callable[[torch.Tensor], torch.Tensor],
-    ) -> None:
-        super().__init__()
-
-        linear_features = 2 * n_features
-        self.first_layer = nn.Linear(
-            in_features=linear_features, out_features=hidden_dim
-        )
-
-        self.layers = nn.ModuleList()
-
-        for _ in range(num_layers):
-            self.layers.append(
-                nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
-            )
-
-        self.activation = activation
-        self.dropout = nn.Dropout(0.5)
-
-        self.last_layer = nn.Linear(in_features=hidden_dim, out_features=1)
-
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, batch: Dict[str, torch.tensor]) -> torch.Tensor:
-        sentence_vector = batch["sentence_vector"]
-        out = self.first_layer(
-            sentence_vector
-        )  # First linear layer, transforms the hidden dimensions from `n_features` (embedding dimension) to `hidden_dim`
-        for layer in self.layers:  # Apply `k` (linear, activation) layer
-            out = layer(out)
-            out = self.activation(out)
-            out = self.dropout(out)
-        out = self.last_layer(
-            out
-        )  # Last linear layer to bring the `hiddem_dim` features to a binary space (`True`/`False`)
-
-        out = self.sigmoid(out)
-        return out.squeeze(-1)
-
-
+# MLP Model
 class MlpClassifier(nn.Module):
     def __init__(
         self,
@@ -70,10 +24,14 @@ class MlpClassifier(nn.Module):
         self.args = args
         ####### EMBEDDING LAYERS #######
         # sentence embedding
-        self.embedding = nn.Embedding.from_pretrained(
-            vectors_store,
-            padding_idx=0,
-        )
+        # self.embedding = nn.Embedding.from_pretrained(
+        #     vectors_store,
+        #     padding_idx=0,
+        # )
+        
+        self.embedding = nn.Embedding(
+                len(vectors_store), args.mlp_n_features, padding_idx=0
+            )
 
         linear_features = 2 * args.mlp_n_features
 
