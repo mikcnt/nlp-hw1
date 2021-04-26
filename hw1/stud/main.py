@@ -47,7 +47,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILSTM"
+    model_type = "BILINEAR"
     use_pos = False
 
     # MLP Parameters
