@@ -1,13 +1,19 @@
 .virtual_documents
 .ipynb_checkpoints
 __pycache__
+.vscode
 .idea
 
 wandb
 
 *.pkl
 *.pth
-.vscode
+*.aux
+*.blg
+*.log
+*.out
+*.bbl
+*.synctex.gz
 
 embeddings/*
 !embeddings/.placeholder
