@@ -169,7 +169,7 @@ if __name__ == "__main__":
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
-    checkpoint = None #Checkpoint(path="checkpoints/bilinear")
+    checkpoint = Checkpoint(path="checkpoints/bilinear")
 
     # save current training on wandb
     if args.save_wandb:

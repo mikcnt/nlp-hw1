@@ -133,4 +133,5 @@ class StudentModel:
             pred = self.model(batch).round()
             predicted.append(pred)
         predicted = torch.stack(predicted, dim=0)
-        return [str(bool(x)) for x in predicted]
+
+        return [str(bool(x)) for x in predicted.reshape(-1)]
