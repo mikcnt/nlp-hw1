@@ -28,7 +28,7 @@ from stud.utils import (
 @dataclass
 class Args:
     # wandb
-    save_wandb = True
+    save_wandb = False
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
@@ -47,7 +47,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "MLP"
+    model_type = "LSTM"
     use_pretrained_embeddings = True
     use_pos = False
 

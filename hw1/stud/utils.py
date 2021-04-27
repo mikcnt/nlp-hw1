@@ -189,6 +189,7 @@ def config_wandb(args, model: nn.Module) -> None:
     # lstm parameters
     if args.model_type == "LSTM":
         config.sentence_embedding_size = args.sentence_embedding_size
+        config.sentence_dropout = args.sentence_dropout
         config.sentence_n_hidden = args.sentence_n_hidden
         config.sentence_num_layers = args.sentence_num_layers
         config.sentence_bidirectional = args.sentence_bidirectional

@@ -125,7 +125,7 @@ class BilinearClassifier(nn.Module):
             )
         else:
             self.embedding = nn.Embedding(
-                len(vectors_store), args.mlp_n_features, padding_idx=0
+                len(vectors_store), args.bi_n_features, padding_idx=0
             )
 
         # POS embedding
@@ -236,13 +236,13 @@ class LstmClassifier(nn.Module):
         ####### EMBEDDING LAYERS #######
         # sentence embedding
         if args.use_pretrained_embeddings:
-            self.embedding = nn.Embedding.from_pretrained(
+            self.embedding_words = nn.Embedding.from_pretrained(
                 vectors_store,
                 padding_idx=0,
             )
         else:
-            self.embedding = nn.Embedding(
-                len(vectors_store), args.mlp_n_features, padding_idx=0
+            self.embedding_words = nn.Embedding(
+                len(vectors_store), args.sentence_embedding_size, padding_idx=0
             )
 
         # POS embedding
@@ -377,13 +377,13 @@ class LstmBilinearClassifier(nn.Module):
         ####### EMBEDDING LAYERS #######
         # sentence embedding
         if args.use_pretrained_embeddings:
-            self.embedding = nn.Embedding.from_pretrained(
+            self.embedding_words = nn.Embedding.from_pretrained(
                 vectors_store,
                 padding_idx=0,
             )
         else:
-            self.embedding = nn.Embedding(
-                len(vectors_store), args.mlp_n_features, padding_idx=0
+            self.embedding_words = nn.Embedding(
+                len(vectors_store), args.sentence_embedding_size, padding_idx=0
             )
 
         # POS embedding
