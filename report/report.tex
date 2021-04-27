@@ -26,6 +26,8 @@
 % and will typically save some space.
 \usepackage{microtype}
 \usepackage{booktabs}
+\usepackage{float}
+
 
 \aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} %  Enter the acl Paper ID here
@@ -80,39 +82,98 @@
 	
 	Since a wide range of features have been tested, at each step we're only going to keep the ones that proved to be effective, actually increasing the performance of the two models.
 	
+	See the tables in the last section for more details.
+	
 	\subsection{Pretrained word embeddings}
 	The first and obvious feature I added to my models is to substitute randomly initialized word embeddings with pretrained ones. Pretrained word embeddings are in fact much more reliable than the ones we could train on our data, since they are trained on very large corpora and therefore allow very high generalization.
 	
 	Moreover, I noticed that training my own word embedding, my models couldn't even surpass a random classifier, thus the mandatory need of a different strategy.
 	
 	For this purpose, as I already anticipated in the preprocessing section, I used Glove, adopting its vocabulary as my own, and considering as OOV words the ones that didn't appear in it. For these words, I decided to use a randomly initialized vector as embedding.
-
+	
+	Using pretrained embeddings, the accuracy increased from 49.10\% to 65.50\% in the MLP model, and from 51.10\% to 63.60\% in the LSTM one.
+	
+	\subsection{Dropout layers}
+	One of the main issues when dealing with the task of WiC disambiguation is the very high risk of overfitting. There is in fact a very big gap between training and validation accuracy, even after just a few epochs. For this reason, I decided to use Dropout layers \citep{JMLR:v15:srivastava14a} after each linear (and recurrent) layer in both models.
+	
+	Using dropout layers, the accuracy increased from 65.50\% to 66.10\% in the MLP model, and from 63.60\% to 63.70\% in the LSTM one.
+	
+	\subsection{Improving the LSTM}
+	There are still a couple of things we can tweak in the LSTM network to improve its performance. The first one is to adopt a \textbf{Bi-LSTM} architecture, taking into consideration both left-to-right and right-to-left contexts of the sentences. The second thing is to \textbf{stack two LSTM layers} together. The combination of these two techniques proved to be effective, increasing the accuracy from 63.70\% to 65.10\%.
+	
+	 Instead, using only one of these two techniques, or stacking more than two recurrent layers, only worsened the performance of the model.
+	
+	\subsection{Bilinear layer}
+	There is still one last step which can be (dramatically) improved: the concatenation between the embeddings summary of the first sentence and the embeddings summary of the second one. I found out that one clever way of replacing this step was to add a bilinear layer, taking in input the two summary embeddings and outputting one single vector.
+	
+	This was actually the step that increased the performance the most, going from 66.10\% to 70.70\% in the MLP model, and from 65.10\% to 65.70\% in the LSTM one.
+	
+	\subsection{POS tagging}
+	An honorable mention goes to part-of-speech tagging. This process consists in marking every token of a sentence with its part of speech. In theory, this tool could help with our classification task, as it should at least provide some additional information about OOV words.
+	
+	In my specific case, I used a pretrained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of models, and was therefore discarded.
+	
+	\section{Conclusion}
+	Contrary to what I expected, the model that performed the best was the one exploiting the average to encode a sequence of embeddings. It is also showcased we can increase the performance of the aforementioned models just by replacing the concatenation operation with a bilinear layer.
 	\clearpage
 	\section{Figures and tables}
-	
-	\begin{figure}[h]
+	All figures and tables have been intentionally placed at the end of the document, in this section, so that they don't affect the maximum limit of two pages.
+	\begin{figure}[H]
 		\centering
 		\includegraphics[width=1\columnwidth]{bilinear_model.png}
 		\caption{Final model architecture.}
 		\label{fig:architecture}
 	\end{figure}
-	
-	\begin{table}[h]
+
+	\begin{table}[H]
 		\centering
-		\begin{tabular}{lrl}
+		\begin{tabular}{@{}ll@{}}
 			\toprule
-			\textbf{Model}                      & \textbf{Dev. acc.} \\ \midrule
-			Glove + Average + Conc. + Linear    & 0.677              \\
-			Glove + LSTM + Conc. + Linear       & 0.651              \\
-			Glove + Average + Bilinear + Linear & 0.707              \\
-			Glove + LSTM + Bilinear             & 0.671              \\ \bottomrule
+			\textbf{Model}               & \textbf{Accuracy (\%)} \\ \midrule
+			MLP = Baseline MLP           & 49.10              \\
+			MLP$_1$ = MLP + Glove*       & 65.50 (+ 16.4)     \\
+			MLP$_2$ = MLP$_2$ + Dropout  & 66.10 (+ 0.6)      \\
+			MLP$_3$ = MLP$_2$ + Bilinear & 70.70 (+ 4.6)     \\ \bottomrule
 		\end{tabular}
-		\caption{Best architectures performances.}
-		\label{tab:model-performances}
+		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings.}
+		\label{tab:MLP-model}
 	\end{table}
 	
+	\begin{table}[H]
+		\centering
+		\begin{tabular}{@{}ll@{}}
+			\toprule
+			\textbf{Model}                                        & \textbf{Accuracy (\%)} \\ \midrule
+			LSTM = Baseline LSTM                                  & 51.10                  \\
+			LSTM$_1$ = LSTM + Glove*                              & 63.60 (+ 12.5)         \\
+			LSTM$_2$ = LSTM$_1$ + Dropout                         & 63.70 (+ 0.1)          \\
+			LSTM$_3$ = Bi-LSTM$_2$ + (stacked $\times$ 2) & 65.10 (+ 1.4)          \\
+			LSTM$_4$ = LSTM$_4$ + Bilinear                        & 65.70 (+ 0.6)       \\ \bottomrule  
+		\end{tabular}
+		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings.}
+		\label{tab:my-table}
+	\end{table}
+
+	\begin{table}[H]
+		\centering
+		\begin{tabular}{@{}ll@{}}
+			\toprule
+			\textbf{Hyperparameter}  & \textbf{Value} \\ \midrule
+			Batch size               & 64             \\
+			Optimizer                & Adam           \\
+			Learning rate            & 0.0001         \\
+			Weight decay             & 0.0001         \\
+			Embedding size           & 300            \\
+			Embedding dropout        & 0              \\
+			Bilinear hidden dim.     & 400            \\
+			Linear hidden. dim       & 400            \\
+			Bilinear, linear dropout & 0.3            \\
+			Activation function      & ReLU           \\ \bottomrule
+		\end{tabular}
+		\caption{Hyperparameters for the final model. All these parameters have been tested using a grid search and the results have been logged using Weight \& Biases.}
+		\label{tab:hyperparameters}
+	\end{table}
 	
-	\bibliographystyle{acl_natbib}
 	\bibliography{bibliography}
 	
 	%\appendix
