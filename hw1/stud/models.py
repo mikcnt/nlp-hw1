@@ -24,12 +24,13 @@ class MlpClassifier(nn.Module):
         self.args = args
         ####### EMBEDDING LAYERS #######
         # sentence embedding
-        # self.embedding = nn.Embedding.from_pretrained(
-        #     vectors_store,
-        #     padding_idx=0,
-        # )
-        
-        self.embedding = nn.Embedding(
+        if args.use_pretrained_embeddings:
+            self.embedding = nn.Embedding.from_pretrained(
+                vectors_store,
+                padding_idx=0,
+            )
+        else:
+            self.embedding = nn.Embedding(
                 len(vectors_store), args.mlp_n_features, padding_idx=0
             )
 
@@ -42,27 +43,15 @@ class MlpClassifier(nn.Module):
             )
             linear_features += 2 * args.pos_embedding_size
 
+        ####### CLASSIFICATION HEAD #######
         self.first_layer = nn.Linear(
             in_features=linear_features, out_features=args.mlp_n_hidden
         )
-
-        ####### CLASSIFICATION HEAD #######
-        self.layers = nn.ModuleList()
-        for i in range(args.mlp_num_layers):
-            self.layers.append(
-                nn.Linear(
-                    in_features=args.mlp_n_hidden * (i + 1),
-                    out_features=args.mlp_n_hidden * (i + 2),
-                )
-            )
-
         self.activation = nn.ReLU()
 
         self.dropout = nn.Dropout(args.mlp_dropout)
 
-        self.last_layer = nn.Linear(
-            in_features=args.mlp_n_hidden * (i + 2), out_features=1
-        )
+        self.last_layer = nn.Linear(in_features=args.mlp_n_hidden, out_features=1)
 
         self.sigmoid = nn.Sigmoid()
 
@@ -100,12 +89,9 @@ class MlpClassifier(nn.Module):
 
         # first linear layer
         out = self.first_layer(sentence_vector)
-        # following linear layers
-        for layer in self.layers:
-            out = layer(out)
-            out = self.activation(out)
-            out = self.dropout(out)
-        # final linear layer
+        out = self.activation(out)
+        out = self.dropout(out)
+
         out = self.last_layer(out)
         out = self.sigmoid(out)
         return out.squeeze(-1)
@@ -132,10 +118,15 @@ class BilinearClassifier(nn.Module):
         self.args = args
         ####### EMBEDDING LAYERS #######
         # sentences embedding
-        self.embedding = nn.Embedding.from_pretrained(
-            vectors_store,
-            padding_idx=0,
-        )
+        if args.use_pretrained_embeddings:
+            self.embedding = nn.Embedding.from_pretrained(
+                vectors_store,
+                padding_idx=0,
+            )
+        else:
+            self.embedding = nn.Embedding(
+                len(vectors_store), args.mlp_n_features, padding_idx=0
+            )
 
         # POS embedding
         if args.use_pos:
@@ -244,9 +235,15 @@ class LstmClassifier(nn.Module):
 
         ####### EMBEDDING LAYERS #######
         # sentence embedding
-        self.embedding_words = nn.Embedding.from_pretrained(
-            vectors_store,
-        )
+        if args.use_pretrained_embeddings:
+            self.embedding = nn.Embedding.from_pretrained(
+                vectors_store,
+                padding_idx=0,
+            )
+        else:
+            self.embedding = nn.Embedding(
+                len(vectors_store), args.mlp_n_features, padding_idx=0
+            )
 
         # POS embedding
         if args.use_pos:
@@ -291,7 +288,7 @@ class LstmClassifier(nn.Module):
         ####### CLASSIFICATION HEAD #######
         self.lin1 = nn.Linear(recurrent_output_size, recurrent_output_size)
         self.activation = nn.ReLU()
-        self.dropout = nn.Dropout(0.3)
+        self.dropout = nn.Dropout(args.linear_dropout)
         self.lin2 = nn.Linear(recurrent_output_size, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -379,9 +376,15 @@ class LstmBilinearClassifier(nn.Module):
 
         ####### EMBEDDING LAYERS #######
         # sentence embedding
-        self.embedding_words = nn.Embedding.from_pretrained(
-            vectors_store,
-        )
+        if args.use_pretrained_embeddings:
+            self.embedding = nn.Embedding.from_pretrained(
+                vectors_store,
+                padding_idx=0,
+            )
+        else:
+            self.embedding = nn.Embedding(
+                len(vectors_store), args.mlp_n_features, padding_idx=0
+            )
 
         # POS embedding
         if args.use_pos:
@@ -432,7 +435,7 @@ class LstmBilinearClassifier(nn.Module):
             recurrent_output_size, recurrent_output_size, args.sentence_n_hidden
         )
         self.activation = nn.ReLU()
-        self.dropout = nn.Dropout(0.3)
+        self.dropout = nn.Dropout(args.linear_dropout)
         self.middle_layer = nn.Linear(args.sentence_n_hidden, args.sentence_n_hidden)
         self.final_layer = nn.Linear(args.sentence_n_hidden, 1)
         self.sigmoid = nn.Sigmoid()
@@ -471,11 +474,11 @@ class LstmBilinearClassifier(nn.Module):
         out = self.bilinear_layer(sentence_lstm_out1, sentence_lstm_out2)
         out = self.activation(out)
         out = self.dropout(out)
-        
+
         out = self.middle_layer(out)
         out = self.activation(out)
         out = self.dropout(out)
-        
+
         out = self.final_layer(out).squeeze(1)
         out = self.sigmoid(out)
 

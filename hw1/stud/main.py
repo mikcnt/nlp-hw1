@@ -28,7 +28,7 @@ from stud.utils import (
 @dataclass
 class Args:
     # wandb
-    save_wandb = False
+    save_wandb = True
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
@@ -48,26 +48,29 @@ class Args:
 
     # model parameters
     model_type = "MLP"
+    use_pretrained_embeddings = True
     use_pos = False
 
     # MLP Parameters
     if model_type == "MLP":
         mlp_n_features = 300
-        mlp_num_layers = 2
+        mlp_num_layers = 0
         mlp_n_hidden = 512
-        mlp_dropout = 0.3
+        mlp_dropout = 0.
 
     # LSTM Parameters
     if model_type == "LSTM":
         sentence_embedding_size = 300
+        linear_dropout = 0.
         sentence_n_hidden = 512
-        sentence_num_layers = 2
-        sentence_bidirectional = True
-        sentence_dropout = 0.3
+        sentence_num_layers = 1
+        sentence_bidirectional = False
+        sentence_dropout = 0.
     
     # LSTM with bilinear Parameters
     if model_type == "BILSTM":
         sentence_embedding_size = 300
+        linear_dropout = 0.3
         sentence_n_hidden = 512
         sentence_num_layers = 2
         sentence_bidirectional = True
@@ -169,7 +172,7 @@ if __name__ == "__main__":
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
 
     # to save/load checkpoints during training
-    checkpoint = Checkpoint(path="checkpoints/bilinear")
+    checkpoint = None # Checkpoint(path="checkpoints/bilinear")
 
     # save current training on wandb
     if args.save_wandb:
