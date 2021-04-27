@@ -25,6 +25,7 @@
 % but it will improve the layout of the manuscript,
 % and will typically save some space.
 \usepackage{microtype}
+\usepackage{booktabs}
 
 \aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} %  Enter the acl Paper ID here
@@ -47,7 +48,7 @@
 \begin{document}
 	\maketitle
 	\section{Introduction}
-	WiC disambiguation is a binary classification task. Each instance in the dataset has a certain target word $w$ and two contexts (i.e., sentences) $c_1$ and $c_2$ in which $w$ is contained. The task is to identify whether the occurrences of the target word in the two sentences carry the same meaning or not.
+	WiC disambiguation is a binary classification task. Each instance in the dataset has a certain target word $w$ and two contexts (i.e., sentences) $c_1$ and $c_2$ in which $w$ is contained. The task is to identify whether the occurrences of the target word $w$ in the two sentences carry the same meaning or not.
 	
 	In this paper I present two architectures to address this task, both based on the use of pretrained embeddings and bilinear layers.
 
@@ -56,34 +57,59 @@
 	
 	To create the vocabulary, it was my first decision to retain all the words appearing in the training dataset, no matter their frequency, since the training set is not very large (i.e., 26119 unique words after the preprocessing part).
 	
-	Anyway, in the next sections we are going to see that even this step can be improved, creating the vocabulary from an external source. Specifically, I decided to inherit the vocabulary of Glove, an unsupervised learning algorithm for obtaining vector representations for words \citep{pennington2014glove}.
+	In the next sections we are going to see that even this step can be improved, creating the vocabulary from an external source. Specifically, I decided to inherit the vocabulary of Glove, an unsupervised learning algorithm for obtaining vector representations for words \citep{pennington2014glove}.
 
 	\section{Models}
-	\subsection{Model architecture}
+	\subsection{Models architecture}
 	Two general structures have been used as baselines to assess the complexity of the given task, and to identify possible improvements in the models. Namely, the first structure I implemented is only based on linear layers, while the second one is composed by an LSTM followed by linear layers.
+	
+	
 	\subsection{Embeddings}
 	The very first module each architecture has is an embedding layer, where each token of each sentence gets projected into a vector space, so that the data can subsequently be fed to the next layers. This layer works as a lookup table between an index, indicating the position of the word in the vocabulary, and its vector representation, called embedding. The vector embeddings are randomly initialized, and they are then tuned during the training phase to minimize the loss function.
 	
 	\subsection{Embeddings aggregation}
+	Once the embeddings for the words of both sentences are computed, we need a way to aggregate this information, to extract the meaning of the sentences as a whole. There are two general approaches we can use when trying to accomplish this task. The first one, the simplest, is to compute some summary statistic (e.g., sum, average, weighted average, etc.) of the set of embeddings. The second approach, on the other hand, involves the use of a recurrent linear layer to encode the sequence of embedding into a single vector.
 	
+	It's not always the case that harder is better: in fact, I noticed that simple summary statistics works much better than the sequence encoding. Specifically, taking the average of the embeddings seems to be the best option between the considered options (i.e., sum, average, weighted average centered around the target word).
 	
+	\subsection{Classification head}
+	The embeddings aggregation is then linked to a classification head, which is composed of one linear layer and a ReLU activation function, followed by a final fully connected layer and a sigmoid function.
 
-	
-	
-	
-	
-	
-%	\begin{figure}[h]
-%		\centering
-%		\includegraphics[width=1\columnwidth]{bilinear_model.png}
-%		\caption{Model architecture.}
-%		\label{fig:architecture}
-%	\end{figure}
 	\section{Experiments}
-	From this point on, a wide range of features have been tested, and in the next sections we will explain each one of them in detail, keeping at each step only the ones that proved to be effective, actually increasing the performance of the model.
-	\section{Result}
+	In this section, we are going to explore possible modifications to these two baseline models we just described, comparing at each step the performance of the two structures.
 	
-	\section{Conclusion}
+	Since a wide range of features have been tested, at each step we're only going to keep the ones that proved to be effective, actually increasing the performance of the two models.
+	
+	\subsection{Pretrained word embeddings}
+	The first and obvious feature I added to my models is to substitute randomly initialized word embeddings with pretrained ones. Pretrained word embeddings are in fact much more reliable than the ones we could train on our data, since they are trained on very large corpora and therefore allow very high generalization.
+	
+	Moreover, I noticed that training my own word embedding, my models couldn't even surpass a random classifier, thus the mandatory need of a different strategy.
+	
+	For this purpose, as I already anticipated in the preprocessing section, I used Glove, adopting its vocabulary as my own, and considering as OOV words the ones that didn't appear in it. For these words, I decided to use a randomly initialized vector as embedding.
+
+	\clearpage
+	\section{Figures and tables}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=1\columnwidth]{bilinear_model.png}
+		\caption{Final model architecture.}
+		\label{fig:architecture}
+	\end{figure}
+	
+	\begin{table}[h]
+		\centering
+		\begin{tabular}{lrl}
+			\toprule
+			\textbf{Model}                      & \textbf{Dev. acc.} \\ \midrule
+			Glove + Average + Conc. + Linear    & 0.677              \\
+			Glove + LSTM + Conc. + Linear       & 0.651              \\
+			Glove + Average + Bilinear + Linear & 0.707              \\
+			Glove + LSTM + Bilinear             & 0.671              \\ \bottomrule
+		\end{tabular}
+		\caption{Best architectures performances.}
+		\label{tab:model-performances}
+	\end{table}
 	
 	
 	\bibliographystyle{acl_natbib}
