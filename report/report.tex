@@ -70,9 +70,9 @@
 	The very first module each architecture has is an embedding layer, where each token of each sentence gets projected into a vector space, so that the data can subsequently be fed to the next layers. This layer works as a lookup table between an index, indicating the position of the word in the vocabulary, and its vector representation, called embedding. The vector embeddings are randomly initialized, and they are then tuned during the training phase to minimize the loss function.
 	
 	\subsection{Embeddings aggregation}
-	Once the embeddings for the words of both sentences are computed, we need a way to aggregate this information, to extract the meaning of the sentences as a whole. There are two general approaches we can use when trying to accomplish this task. The first one, the simplest, is to compute some summary statistic (e.g., sum, average, weighted average, etc.) of the set of embeddings. The second approach, on the other hand, involves the use of a recurrent linear layer to encode the sequence of embedding into a single vector.
+	Once the embeddings for the words of both sentences are computed, we need a way to aggregate this information, to extract the meaning of the sentences as a whole. There are two general approaches we can use when trying to accomplish this task. The first one, the simplest, is to compute some summary statistic (e.g., sum, average, weighted average, etc.) of the set of embeddings. The second approach, on the other hand, involves the use of a recurrent layer to encode the sequence of embedding into a single vector.
 	
-	It's not always the case that harder is better: in fact, I noticed that simple summary statistics works much better than the sequence encoding. Specifically, taking the average of the embeddings seems to be the best option between the considered options (i.e., sum, average, weighted average centered around the target word).
+	It's not always the case that harder is better: I noticed that, in this case, simple summary statistics works much better than sequence encoding. Specifically, taking the average of the embeddings seems to be the best option between the considered options (i.e., sum, average, weighted average centered around the target word).
 	
 	\subsection{Classification head}
 	The embeddings aggregation is then linked to a classification head, which is composed of one linear layer and a ReLU activation function, followed by a final fully connected layer and a sigmoid function.
@@ -111,7 +111,7 @@
 	\subsection{POS tagging}
 	An honorable mention goes to part-of-speech tagging. This process consists in marking every token of a sentence with its part of speech. In theory, this tool could help with our classification task, as it should at least provide some additional information about OOV words.
 	
-	In my specific case, I used a pretrained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of models, and was therefore discarded.
+	In my specific case, I used a pretrained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of the models, and was therefore discarded.
 	
 	\section{Conclusion}
 	Contrary to what I expected, the model that performed the best was the one exploiting the average to encode a sequence of embeddings. It is also showcased we can increase the performance of the aforementioned models just by replacing the concatenation operation with a bilinear layer.
@@ -135,7 +135,7 @@
 			MLP$_2$ = MLP$_2$ + Dropout  & 66.10 (+ 0.6)      \\
 			MLP$_3$ = MLP$_2$ + Bilinear & 70.70 (+ 4.6)     \\ \bottomrule
 		\end{tabular}
-		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings.}
+		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}
 		\label{tab:MLP-model}
 	\end{table}
 	
@@ -150,7 +150,7 @@
 			LSTM$_3$ = Bi-LSTM$_2$ + (stacked $\times$ 2) & 65.10 (+ 1.4)          \\
 			LSTM$_4$ = LSTM$_4$ + Bilinear                        & 65.70 (+ 0.6)       \\ \bottomrule  
 		\end{tabular}
-		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings.}
+		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}
 		\label{tab:my-table}
 	\end{table}
 
@@ -191,7 +191,7 @@
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=1\columnwidth]{losses_mlp.png}
-		\caption{Training and validation loss plot of the MLP$_3$ (last variation) model. This model never converges, which probably means that the concatenation of the sentence embeddings is not the best way to handle the data.}
+		\caption{Training and validation loss plot of the MLP$_3$ (i.e., last variation) model. This model never converges, which probably means that the concatenation of the sentence's embeddings is not the best way to handle the data.}
 		\label{fig:losses_mlp}
 	\end{figure}
 	
