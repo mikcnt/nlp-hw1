@@ -52,22 +52,22 @@
 	\section{Introduction}
 	WiC disambiguation is a binary classification task. Each instance in the dataset has a certain target word $w$ and two contexts (i.e., sentences) $c_1$ and $c_2$ in which $w$ is contained. The task is to identify whether the occurrences of the target word $w$ in the two sentences carry the same meaning or not.
 	
-	In this paper I present two architectures to address this task, both based on the use of pretrained embeddings and bilinear layers.
+	In this paper, I present two architectures to address this task, both based on the use of pre-trained embeddings and bilinear layers.
 
 	\section{Preprocessing}	
-	Various options have been considered in order to preprocess the data, but, ultimately, I decided to follow a very basic pipeline in this phase. Specifically, all the pairs of sentences have been lowercased, all the punctuation has been stripped, and finally I removed all the stopwords and digits from the sentences. As for stemming and lemmatization, instead, I specifically decided to avoid these operations for two reasons: the first one being that I already had in mind to exploit pretrained word embeddings, which are often computed for non lemmatized/stemmed words, and also because I felt like the specific form of each word could help disambiguate one sentence from the other.
+	Various options have been considered in order to preprocess the data, but, ultimately, I decided to follow a very basic pipeline in this phase. Specifically, all the pairs of sentences have been lowercased, all the punctuation has been stripped, and finally, I removed all the stopwords and digits from the sentences. As for stemming and lemmatization, instead, I specifically decided to avoid these operations for two reasons: the first one being that I already had in mind to exploit pre-trained word embeddings, which are often computed for non lemmatized/stemmed words, and also because I felt like the specific form of each word could help disambiguate one sentence from the other.
 	
 	To create the vocabulary, it was my first decision to retain all the words appearing in the training dataset, no matter their frequency, since the training set is not very large (i.e., 26119 unique words after the preprocessing part).
 	
-	In the next sections we are going to see that even this step can be improved, creating the vocabulary from an external source. Specifically, I decided to inherit the vocabulary of Glove, an unsupervised learning algorithm for obtaining vector representations for words \citep{pennington2014glove}.
+	In the next sections, we are going to see that even this step can be improved, creating the vocabulary from an external source. Specifically, I decided to inherit the vocabulary of Glove, an unsupervised learning algorithm for obtaining vector representations for words \citep{pennington2014glove}.
 
 	\section{Models}
 	\subsection{Models architecture}
-	Two general structures have been used as baselines to assess the complexity of the given task, and to identify possible improvements in the models. Namely, the first structure I implemented is only based on linear layers, while the second one is composed by an LSTM followed by linear layers.
+	Two general structures have been used as baselines to assess the complexity of the given task, and to identify possible improvements in the models. Namely, the first structure I implemented is only based on linear layers, while the second one is composed of an LSTM followed by linear layers.
 	
 	
 	\subsection{Embeddings}
-	The very first module each architecture has is an embedding layer, where each token of each sentence gets projected into a vector space, so that the data can subsequently be fed to the next layers. This layer works as a lookup table between an index, indicating the position of the word in the vocabulary, and its vector representation, called embedding. The vector embeddings are randomly initialized, and they are then tuned during the training phase to minimize the loss function.
+	The very first module each architecture has is an embedding layer, where each token of each sentence gets projected into a vector space so that the data can subsequently be fed to the next layers. This layer works as a lookup table between an index, indicating the position of the word in the vocabulary, and its vector representation, called embedding. The vector embeddings are randomly initialized, and they are then tuned during the training phase to minimize the loss function.
 	
 	\subsection{Embeddings aggregation}
 	Once the embeddings for the words of both sentences are computed, we need a way to aggregate this information, to extract the meaning of the sentences as a whole. There are two general approaches we can use when trying to accomplish this task. The first one, the simplest, is to compute some summary statistic (e.g., sum, average, weighted average, etc.) of the set of embeddings. The second approach, on the other hand, involves the use of a recurrent layer to encode the sequence of embedding into a single vector.
@@ -82,14 +82,14 @@
 	
 	At each step, we're going to keep only the features that prove to be effective. We're also going to use early stopping, so that the best weights are used for every variation. Finally, all the variations here discussed have been trained using Adam \citep{kingma2017adam} as optimizer. Check tables \ref{tab:MLP-model} and \ref{tab:LSTM-model} for a comprehensive summary of these tests.
 	
-	\subsection{Pretrained word embeddings}
-	The first and obvious feature I added to my models is to substitute randomly initialized word embeddings with pretrained ones. Pretrained word embeddings are in fact much more reliable than the ones we could train on our data, since they are trained on very large corpora and therefore allow very high generalization.
+	\subsection{Pre-trained word embeddings}
+	The first and obvious feature I added to my models is to substitute randomly initialized word embeddings with pre-trained ones. Pre-trained word embeddings are in fact much more reliable than the ones we could train on our data, since they are trained on very large corpora and therefore allow very high generalization.
 	
 	Moreover, I noticed that training my own word embedding, my models couldn't even surpass a random classifier, thus the mandatory need of a different strategy.
 	
 	For this purpose, as I already anticipated in the preprocessing section, I used Glove, adopting its vocabulary as my own, and considering as OOV words the ones that didn't appear in it. For these words, I decided to use a randomly initialized vector as embedding.
 	
-	Using pretrained embeddings, the accuracy increased from 49.10\% to 65.50\% in the MLP model, and from 51.10\% to 63.60\% in the LSTM one.
+	Using pre-trained embeddings, the accuracy increased from 49.10\% to 65.50\% in the MLP model, and from 51.10\% to 63.60\% in the LSTM one.
 	
 	\subsection{Dropout layers}
 	One of the main issues when dealing with the task of WiC disambiguation is the very high risk of overfitting. There is in fact a very big gap between training and validation accuracy, even after just a few epochs. For this reason, I decided to use Dropout layers \citep{JMLR:v15:srivastava14a} after each linear (and recurrent) layer in both models.
@@ -109,7 +109,7 @@
 	\subsection{POS tagging}
 	An honorable mention goes to part-of-speech tagging. This process consists in marking every token of a sentence with its part of speech. In theory, this tool could help with our classification task, as it should at least provide some additional information about OOV words.
 	
-	In my specific case, I used a pretrained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of the models, and was therefore discarded.
+	In my specific case, I used a pre-trained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of the models, and was therefore discarded.
 	
 	\section{Conclusion}
 	Contrary to what I expected, the model that performed the best (fig. \ref{fig:architecture}) was the one using the average to encode a sequence of embeddings. It is also showcased that the performance of the aforementioned models can be dramatically increased by replacing the concatenation with a bilinear layer.
@@ -133,7 +133,7 @@
 			MLP$_2$ = MLP$_1$ + Dropout  & 66.10 (+ 0.6)      \\
 			MLP$_3$ = MLP$_2$ + Bilinear & 70.70 (+ 4.6)     \\ \bottomrule
 		\end{tabular}
-		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}
+		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pre-trained.}
 		\label{tab:MLP-model}
 	\end{table}
 	
@@ -148,7 +148,7 @@
 			LSTM$_3$ = Bi-LSTM$_2$ + (stacked $\times$ 2) & 65.10 (+ 1.4)          \\
 			LSTM$_4$ = LSTM$_4$ + Bilinear                        & 65.70 (+ 0.6)       \\ \bottomrule  
 		\end{tabular}
-		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}
+		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pre-trained.}
 		\label{tab:LSTM-model}
 	\end{table}
 

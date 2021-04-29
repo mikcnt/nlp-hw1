@@ -71,6 +71,10 @@ class LstmBilinearClassifier(nn.Module):
                 pos_recurrent_output_size, pos_recurrent_output_size, args.pos_n_hidden
             )
 
+            self.pos_bilinear = nn.Bilinear(
+                args.sentence_n_hidden, args.pos_n_hidden, args.bi_n_hidden
+            )
+
         ####### CLASSIFICATION HEAD #######
         self.bilinear_layer = nn.Bilinear(
             recurrent_output_size, recurrent_output_size, args.sentence_n_hidden
@@ -111,14 +115,19 @@ class LstmBilinearClassifier(nn.Module):
             pos_lstm_out1 = self._rnn_forward(self.rnn_pos, pos_embedding1, lengths1)
             pos_lstm_out2 = self._rnn_forward(self.rnn_pos, pos_embedding2, lengths2)
 
+            pos_out = self.pos_bilinear_layer(pos_lstm_out1, pos_lstm_out2)
+
         # bilinear and fully connected pass
         out = self.bilinear_layer(sentence_lstm_out1, sentence_lstm_out2)
         out = self.activation(out)
         out = self.dropout(out)
 
-        # out = self.middle_layer(out)
-        # out = self.activation(out)
-        # out = self.dropout(out)
+        if self.args.use_pos:
+            out = self.pos_bilinear(out, pos_out)
+
+        out = self.middle_layer(out)
+        out = self.activation(out)
+        out = self.dropout(out)
 
         out = self.final_layer(out).squeeze(1)
         out = self.sigmoid(out)

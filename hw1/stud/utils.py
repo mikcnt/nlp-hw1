@@ -167,6 +167,14 @@ def config_wandb(args, model: nn.Module) -> None:
         config.bi_n_hidden = args.bi_n_hidden
         config.bi_n_dropout = args.bi_dropout
 
+    if args.model_type == "BILINEARLSTM":
+        config.sentence_embedding_size = args.sentence_embedding_size
+        config.sentence_dropout = args.sentence_dropout
+        config.sentence_n_hidden = args.sentence_n_hidden
+        config.sentence_num_layers = args.sentence_num_layers
+        config.sentence_bidirectional = args.sentence_bidirectional
+        config.sentence_dropout = args.sentence_dropout
+
     # parameter for wandb update
     config.log_interval = 1
 
