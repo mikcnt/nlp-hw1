@@ -1,12 +1,16 @@
 from typing import Any, Dict, List, Optional
+import copy
+
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 from torch import nn
 from tqdm import tqdm
 
 import wandb
-from stud.utils import Checkpoint
-
 
 def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:
     """Move all elements of batch (i.e., `sentence1`, `pos1` etc.) to device (i.e. gpu if available)."""
@@ -23,8 +27,9 @@ def fit(
     valid_dl: torch.utils.data.DataLoader,
     opt: torch.optim.Optimizer,
     scheduler: Any = None,
-    checkpoint: Optional[Checkpoint] = None,
+    save_checkpoint: bool = False,
     verbose: int = 2,
+    evaluate: bool = False,
 ) -> None:
     """Trainer function."""
     # keep track of losses and accuracies
@@ -110,13 +115,27 @@ def fit(
         accuracies["val"].append(acc_val)
 
         # store checkpoint
-        if checkpoint:
-            checkpoint.save(model, opt, epoch, losses, accuracies)
+        if save_checkpoint:
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": opt.state_dict(),
+                    "loss": losses,
+                    "accuracies": accuracies
+                },
+                f"checkpoints/{str(epoch).zfill(3)}.pth",
+            )
 
         if verbose > 1:
             print(
                 f"Epoch {epoch} \t T. Loss = {loss_train:.4f}, V. Loss = {loss_val:.4f}, T. Accuracy {acc_train:.3f}, V. Accuracy {acc_val:.3f}."
             )
+
+        # update best_model if it is better than previous ones
+        if evaluate:
+            if epoch == 1 or acc_val > max(accuracies["val"][:-1]):
+                best_model = copy.deepcopy(model)
 
         if save_wandb:
             # save losses on wandb
@@ -131,4 +150,52 @@ def fit(
 
     if verbose > 0:
         print("Training finished.")
+
+    # if evaluate, save all useful plots
+    if evaluate:
+        if verbose > 0:
+            print("Starting evaluation.")
+
+        # get predictions
+        best_model = best_model.to("cpu")
+        best_model.eval()
+        predictions = torch.cat(
+            [best_model(batch).round() for batch in valid_dl], dim=0
+        )
+        predictions = predictions.reshape(-1).detach().numpy()
+
+        # get ground truths
+        ground_truths = torch.cat([batch["label"] for batch in valid_dl], dim=0)
+        ground_truths = ground_truths.reshape(-1).detach().numpy()
+
+        # confusion matrix
+        cm = confusion_matrix(ground_truths, predictions)
+        # normalize confusion matrix
+        cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+
+        # save confusion matrix plot
+        fig, ax = plt.subplots(figsize=(4, 4), dpi=200)
+        ConfusionMatrixDisplay(cm, display_labels=["False", "True"]).plot(
+            cmap="Blues", ax=ax
+        )
+        plt.savefig("outputs/confusion_matrix.png")
+
+        # save losses and accuracies plots
+        train_loss = losses["train"]
+        val_loss = losses["val"]
+        train_acc = accuracies["train"]
+        val_acc = accuracies["val"]
+
+        fig, ax = plt.subplots(figsize=(6, 4), dpi=200)
+        ax.plot(train_loss, label="Train loss")
+        ax.plot(val_loss, label="Val loss")
+        ax.legend()
+        plt.savefig("outputs/losses.png")
+
+        fig, ax = plt.subplots(figsize=(6, 4), dpi=200)
+        ax.plot(train_acc, label="Train acc")
+        ax.plot(val_acc, label="Val acc")
+        ax.legend()
+        plt.savefig("outputs/accuracies.png")
+
     return losses, accuracies

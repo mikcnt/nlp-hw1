@@ -1,5 +1,4 @@
 import random
-import string
 from dataclasses import dataclass
 
 import numpy as np
@@ -16,7 +15,6 @@ from stud.models.lstm_bilinear import LstmBilinearClassifier
 
 from stud.trainer import fit
 from stud.utils import (
-    Checkpoint,
     config_wandb,
     embeddings_dictionary,
     index_dictionary,
@@ -28,12 +26,14 @@ from stud.utils import (
 # architectures and parameters
 @dataclass
 class Args:
+    # if in evaluation mode, save losses plots, accuracies plots, confusion matrix
+    evaluate = False
     # wandb
     save_wandb = False
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
-    num_epochs = 50
+    num_epochs = 15
     batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
@@ -106,12 +106,12 @@ if __name__ == "__main__":
     dev_path = "../../data/dev.jsonl"
 
     # pretrained embedding path
-    embedding_path = "../../embeddings/glove.6B.300d.txt"
+    embedding_path = "embeddings/glove.6B.300d.txt"
 
     # create vocabulary with pretrained embeddings
     print("Reading pretrained embeddings file...")
     word_vectors = embeddings_dictionary(
-        embedding_path=embedding_path, skip_first=False
+        embedding_path=embedding_path, skip_first=False, testing_mode=False,
     )
 
     # remove words with low frequency (if `args.vocab_threshold` != 0)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # instantiate scheduler (if None, no scheduler is used during training)
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
     # to save/load checkpoints during training (if None, no checkpoints are saved)
-    checkpoint = None  # Checkpoint(path="checkpoints/bilinear")
+    save_checkpoint = True
 
     # save current training on wandb
     if args.save_wandb:
@@ -187,9 +187,7 @@ if __name__ == "__main__":
         valid_dl=val_loader,
         opt=optimizer,
         scheduler=scheduler,
-        checkpoint=checkpoint,
+        save_checkpoint=save_checkpoint,
         verbose=2,
+        evaluate=args.evaluate,
     )
-
-    # save_pickle(losses, "mlp_loss.pkl")
-    # save_pickle(accuracies, "mlp_acc.pkl")

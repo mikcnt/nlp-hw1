@@ -25,55 +25,6 @@ def load_pickle(path: str) -> dict:
         return pickle.load(f)
 
 
-# save/load models checkpoints
-class Checkpoint:
-    def __init__(self, path: str, resume: bool = False) -> None:
-        self.path = path
-        os.makedirs(path, exist_ok=True)
-        self.resume = resume
-
-    def load(self, model, optimizer, id_path=""):
-        if (not self.resume) and id_path == "":
-            raise RuntimeError()
-        if self.resume:
-            id_path = sorted(os.listdir(self.path))[-1]
-        self.checkpoint = torch.load(
-            os.path.join(self.path, id_path), map_location=lambda storage, loc: storage
-        )
-        if self.checkpoint == None:
-            raise RuntimeError("Checkpoint empty.")
-        epoch = self.checkpoint["epoch"]
-        model.load_state_dict(self.checkpoint["model_state_dict"])
-        optimizer.load_state_dict(self.checkpoint["optimizer_state_dict"])
-        losses = self.checkpoint["losses"]
-        accuracies = self.checkpoint["accuracies"]
-        return (model, optimizer, epoch, losses, accuracies)
-
-    def save(self, model, optimizer, epoch, losses, accuracies):
-        model_checkpoint = {
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "losses": losses,
-            "accuracies": accuracies,
-        }
-        checkpoint_name = "{}.pth".format(str(epoch).zfill(3))
-        complete_path = os.path.join(self.path, checkpoint_name)
-        torch.save(model_checkpoint, complete_path)
-        return
-
-    def load_just_model(self, model, id_path=""):
-        if self.resume:
-            id_path = sorted(os.listdir(self.path))[-1]
-        self.checkpoint = torch.load(
-            os.path.join(self.path, id_path), map_location=lambda storage, loc: storage
-        )
-        if self.checkpoint == None:
-            raise RuntimeError("Checkpoint empty.")
-        model.load_state_dict(self.checkpoint["model_state_dict"])
-        return model
-
-
 def embeddings_dictionary(
     embedding_path: str,
     skip_first=False,
@@ -89,7 +40,7 @@ def embeddings_dictionary(
                 continue
             # break immediately if in testing mode to save time
             # all tokens will therefore be considered as <unk>
-            if testing_mode:
+            if testing_mode and i == 10000:
                 break
             word, *vector = line.strip().split(" ")
             vector = torch.tensor([float(c) for c in vector])

@@ -11,7 +11,6 @@ from model import Model
 from torch.utils.data import DataLoader
 
 from stud.datasets.dataset import WiCDataset
-from stud.datasets.pos import pos_all_tags
 from stud.models.bilinear import BilinearClassifier
 from stud.utils import index_dictionary, load_pickle
 
@@ -98,6 +97,6 @@ class StudentModel:
             batch = batch_to_device(batch, self.device)
             pred = self.model(batch).round()
             predicted.append(pred)
-        predicted = torch.stack(predicted, dim=0)
+        predicted = torch.cat(predicted, dim=0)
 
         return [str(bool(x)) for x in predicted.reshape(-1)]
