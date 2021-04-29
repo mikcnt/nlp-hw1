@@ -3,21 +3,14 @@ from torch import nn
 
 from typing import List, Tuple, Optional, Dict, Callable
 
-
-def text_length(sentences: torch.Tensor) -> torch.Tensor:
-    # search first zero
-    lengths = (sentences == 0).int().argmax(axis=1)
-    # length 0 only if sentence has max length
-    # => replace 0 with max length
-    lengths[lengths == 0] = sentences.shape[-1]
-    return lengths
+from stud.utils import text_length
 
 
 # MLP Model
 class MlpClassifier(nn.Module):
     def __init__(
         self,
-        vectors_store: List[torch.Tensor],
+        vectors_store: torch.Tensor,
         args,
     ) -> None:
         super().__init__()
@@ -31,10 +24,10 @@ class MlpClassifier(nn.Module):
             )
         else:
             self.embedding = nn.Embedding(
-                len(vectors_store), args.mlp_n_features, padding_idx=0
+                len(vectors_store), args.sentence_embedding_size, padding_idx=0
             )
 
-        linear_features = 2 * args.mlp_n_features
+        linear_features = 2 * args.sentence_embedding_size
 
         # POS embedding
         if args.use_pos:
@@ -125,7 +118,7 @@ class BilinearClassifier(nn.Module):
             )
         else:
             self.embedding = nn.Embedding(
-                len(vectors_store), args.bi_n_features, padding_idx=0
+                len(vectors_store), args.sentence_embedding_size, padding_idx=0
             )
 
         # POS embedding
@@ -136,7 +129,7 @@ class BilinearClassifier(nn.Module):
 
         ####### CLASSIFICATION HEAD #######
         self.bilinear_layer = nn.Bilinear(
-            args.bi_n_features, args.bi_n_features, args.bi_n_hidden
+            args.sentence_embedding_size, args.sentence_embedding_size, args.bi_n_hidden
         )
 
         if args.use_pos:

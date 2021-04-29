@@ -132,7 +132,7 @@
 			\textbf{Model}               & \textbf{Accuracy (\%)} \\ \midrule
 			MLP = Baseline MLP           & 49.10              \\
 			MLP$_1$ = MLP + Glove*       & 65.50 (+ 16.4)     \\
-			MLP$_2$ = MLP$_2$ + Dropout  & 66.10 (+ 0.6)      \\
+			MLP$_2$ = MLP$_1$ + Dropout  & 66.10 (+ 0.6)      \\
 			MLP$_3$ = MLP$_2$ + Bilinear & 70.70 (+ 4.6)     \\ \bottomrule
 		\end{tabular}
 		\caption{Performance gain of the MLP model, where MLP refers to the model that doesn't use an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}

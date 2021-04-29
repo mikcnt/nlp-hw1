@@ -14,11 +14,13 @@ from stud.datasets.data_processing import preprocess
 
 # save/load pickle
 def save_pickle(data: dict, path: str) -> None:
+    """Save object as pickle file."""
     with open(path, "wb") as f:
         pickle.dump(data, f)
 
 
 def load_pickle(path: str) -> dict:
+    """Load object from pickle file."""
     with open(path, "rb") as f:
         return pickle.load(f)
 
@@ -72,19 +74,23 @@ class Checkpoint:
         return model
 
 
-# load pretrained embedding dictionaries
 def embeddings_dictionary(
-    embedding_path: str, skip_first=False
+    embedding_path: str,
+    skip_first=False,
+    testing_mode=False,
 ) -> Dict[str, torch.Tensor]:
+    """Load pretrained embedding dictionaries."""
     word_vectors = dict()
     num_lines = sum(1 for line in open(embedding_path, "r"))
     with open(embedding_path) as f:
         for i, line in tqdm(enumerate(f), total=num_lines):
+            # if pretrained embedding has 1 header line
             if i == 0 and skip_first:
                 continue
-            # for tests
-            # if i == 10000:
-            #     break
+            # break immediately if in testing mode to save time
+            # all tokens will therefore be considered as <unk>
+            if testing_mode:
+                break
             word, *vector = line.strip().split(" ")
             vector = torch.tensor([float(c) for c in vector])
 
@@ -94,27 +100,19 @@ def embeddings_dictionary(
 
 def index_dictionary(
     word_vectors: Dict[str, torch.Tensor], embedding_size=300
-) -> Tuple[Dict[str, int], List[torch.Tensor]]:
+) -> Tuple[Dict[str, int], torch.Tensor]:
+    """Create word2index dictionary and list of vectors containing respective embedding."""
     word_index = dict()
-    vectors_store = []
-
-    # pad token, index = 0
-    vectors_store.append(torch.rand(embedding_size))
-
-    # unk token, index = 1
-    vectors_store.append(torch.rand(embedding_size))
+    # pad token -> index = 0; unk token -> index = 1
+    vectors_store = [torch.rand(embedding_size), torch.rand(embedding_size)]
 
     # save index for each word
     for word, vector in word_vectors.items():
-        # skip unk token if present
-        if word == "<unk>":
-            continue
         word_index[word] = len(vectors_store)
         vectors_store.append(vector)
 
-    word_index = defaultdict(
-        lambda: 1, word_index
-    )  # default dict returns 1 (unk token) when unknown word
+    # default dict returns 1 (unk token) when unknown word is encountered
+    word_index = defaultdict(lambda: 1, word_index)
     vectors_store = torch.stack(vectors_store)
     return word_index, vectors_store
 
@@ -122,10 +120,17 @@ def index_dictionary(
 def word_vectors_most_common(
     dataset_path: str, word_vectors: Dict[str, torch.Tensor], threshold: int = 1
 ) -> Dict[str, torch.Tensor]:
+    """Modify word vectors vocabulary according to a threshold.
+    If `threshold == 0`, all words are kept (even the ones not contained in the
+    dataset itself!). Otherwise, just the words with frequency > threshold are kept."""
     if threshold == 0:
         return word_vectors
+    # compute frequency of words in the dataset
     vocabulary_count = Counter()
     with jsonlines.open(dataset_path, "r") as f:
+        # notice that all sentences in the dataset go through the same process
+        # that we do in the dataset creation. This way, we don't risk having words
+        # in the vocabulary that don't actually appear in the dataset
         for line in f.iter():
             s1 = line["sentence1"]
             s2 = line["sentence2"]
@@ -139,6 +144,7 @@ def word_vectors_most_common(
 
             vocabulary_count.update(t1 + t2)
 
+    # return words with selected frequency
     return {
         word: vector
         for word, vector in word_vectors.items()
@@ -146,6 +152,17 @@ def word_vectors_most_common(
     }
 
 
+def text_length(sentences: torch.Tensor) -> torch.Tensor:
+    """Compute number of non padded indices in tensor."""
+    # search first zero
+    lengths = (sentences == 0).int().argmax(axis=1)
+    # length 0 only if sentence has max length
+    # => replace 0 with max length
+    lengths[lengths == 0] = sentences.shape[-1]
+    return lengths
+
+
+# Weight and biases logs
 def config_wandb(args, model: nn.Module) -> None:
     """Save on wandb current training settings."""
     # initialize wandb remote repo

@@ -9,6 +9,7 @@ from stud.utils import Checkpoint
 
 
 def batch_to_device(batch: Dict[str, torch.Tensor], device: str) -> List[torch.Tensor]:
+    """Move all elements of batch (i.e., `sentence1`, `pos1` etc.) to device (i.e. gpu if available)."""
     return {key: value.to(device) for key, value in batch.items()}
 
 
@@ -25,7 +26,7 @@ def fit(
     checkpoint: Optional[Checkpoint] = None,
     verbose: int = 2,
 ) -> None:
-
+    """Trainer function."""
     # keep track of losses and accuracies
     losses = {"train": [], "val": []}
     accuracies = {"train": [], "val": []}

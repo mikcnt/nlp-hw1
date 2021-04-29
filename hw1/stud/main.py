@@ -6,15 +6,14 @@ import numpy as np
 import torch
 from torch import nn
 
-from stud.datasets.lstm_dataset import WiCDataset, read_data
+from stud.datasets.dataset import WiCDataset, read_data
 from stud.datasets.pos import pos_all_tags
-from stud.models import (
-    BilinearClassifier,
-    LstmBilinearClassifier,
-    LstmClassifier,
-    MlpClassifier,
-    LstmBilinearClassifier,
-)
+
+from stud.models.mlp import MlpClassifier
+from stud.models.lstm import LstmClassifier
+from stud.models.bilinear import BilinearClassifier
+from stud.models.lstm_bilinear import LstmBilinearClassifier
+
 from stud.trainer import fit
 from stud.utils import (
     Checkpoint,
@@ -22,9 +21,11 @@ from stud.utils import (
     embeddings_dictionary,
     index_dictionary,
     word_vectors_most_common,
+    save_pickle,
 )
 
-
+# tweak the parameters of the class `Args` to test different
+# architectures and parameters
 @dataclass
 class Args:
     # wandb
@@ -32,7 +33,7 @@ class Args:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # general parameters
-    num_epochs = 15
+    num_epochs = 50
     batch_size = 64
     lr = 0.0001
     weight_decay = 0.0001
@@ -47,29 +48,26 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "LSTM"
+    model_type = "BILINEAR"
     use_pretrained_embeddings = True
     use_pos = False
 
     # MLP Parameters
     if model_type == "MLP":
-        mlp_n_features = 300
         mlp_num_layers = 0
         mlp_n_hidden = 512
-        mlp_dropout = 0.
+        mlp_dropout = 0.3
 
     # LSTM Parameters
     if model_type == "LSTM":
-        sentence_embedding_size = 300
-        linear_dropout = 0.
+        linear_dropout = 0.3
         sentence_n_hidden = 512
-        sentence_num_layers = 1
-        sentence_bidirectional = False
-        sentence_dropout = 0.
-    
+        sentence_num_layers = 2
+        sentence_bidirectional = True
+        sentence_dropout = 0.3
+
     # LSTM with bilinear Parameters
     if model_type == "BILSTM":
-        sentence_embedding_size = 300
         linear_dropout = 0.3
         sentence_n_hidden = 512
         sentence_num_layers = 2
@@ -124,10 +122,6 @@ if __name__ == "__main__":
     # create dictionary from word to index and respective list of embedding tensors
     word_index, vectors_store = index_dictionary(word_vectors)
 
-    # create random string of 20 characters to mark the target word
-    # so that we don't lose it during the preprocessing steps in the dataset creation
-    marker = "".join(random.choices(string.ascii_lowercase, k=20))
-
     # create train and validation datasets
     train_data = read_data(train_path)
     val_data = read_data(dev_path)
@@ -135,13 +129,11 @@ if __name__ == "__main__":
     train_dataset = WiCDataset(
         data=train_data,
         word_index=word_index,
-        marker=marker,
         args=args,
     )
     val_dataset = WiCDataset(
         data=val_data,
         word_index=word_index,
-        marker=marker,
         args=args,
     )
 
@@ -149,18 +141,24 @@ if __name__ == "__main__":
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True
     )
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=args.batch_size, shuffle=False
+    )
 
     # instantiate loss
     criterion = nn.BCELoss()
 
-    # select either MLP or LSTM as model
+    # select model type
+    # mean aggregation model with concatenation
     if args.model_type == "MLP":
         model = MlpClassifier(vectors_store, args).to(args.device)
+    # sequence encoding with concatenation
     elif args.model_type == "LSTM":
         model = LstmClassifier(vectors_store, args).to(args.device)
+    # mean aggregation model with bilinear layer
     elif args.model_type == "BILINEAR":
         model = BilinearClassifier(vectors_store, args).to(args.device)
+    # LSTM with bilinear layer
     elif args.model_type == "BILSTM":
         model = LstmBilinearClassifier(vectors_store, args).to(args.device)
 
@@ -169,10 +167,10 @@ if __name__ == "__main__":
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
 
+    # instantiate scheduler (if None, no scheduler is used during training)
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
-
-    # to save/load checkpoints during training
-    checkpoint = None # Checkpoint(path="checkpoints/bilinear")
+    # to save/load checkpoints during training (if None, no checkpoints are saved)
+    checkpoint = None  # Checkpoint(path="checkpoints/bilinear")
 
     # save current training on wandb
     if args.save_wandb:
@@ -192,3 +190,6 @@ if __name__ == "__main__":
         checkpoint=checkpoint,
         verbose=2,
     )
+
+    # save_pickle(losses, "mlp_loss.pkl")
+    # save_pickle(accuracies, "mlp_acc.pkl")
