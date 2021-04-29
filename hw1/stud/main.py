@@ -48,7 +48,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILINEARLSTM"
+    model_type = "BILINEAR"
     use_pretrained_embeddings = True
     use_pos = False
 
@@ -69,7 +69,7 @@ class Args:
     # LSTM with bilinear Parameters
     if model_type == "BILINEARLSTM":
         linear_dropout = 0.3
-        sentence_n_hidden = 300
+        sentence_n_hidden = 512
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
@@ -169,8 +169,8 @@ if __name__ == "__main__":
 
     # instantiate scheduler (if None, no scheduler is used during training)
     scheduler = None  # torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.1)
-    # to save/load checkpoints during training (if None, no checkpoints are saved)
-    save_checkpoint = True
+    # to save checkpoints during training (if False, no checkpoints are saved)
+    save_checkpoint = False
 
     # save current training on wandb
     if args.save_wandb:

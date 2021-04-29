@@ -82,7 +82,7 @@
 	
 	Since a wide range of features have been tested, at each step we're only going to keep the ones that proved to be effective, actually increasing the performance of the two models.
 	
-	All the variations here discussed have been trained using Adam \citep{kingma2017adam} as optimizer.
+	All the variations here discussed have been trained using Adam \citep{kingma2017adam} as optimizer. Check table \ref{tab:MLP-model} and \ref{tab:LSTM-model} for details.
 	
 	\subsection{Pretrained word embeddings}
 	The first and obvious feature I added to my models is to substitute randomly initialized word embeddings with pretrained ones. Pretrained word embeddings are in fact much more reliable than the ones we could train on our data, since they are trained on very large corpora and therefore allow very high generalization.
@@ -114,7 +114,7 @@
 	In my specific case, I used a pretrained POS tagger, tagging each word of both sentences. These tags were then replaced by an index and fed to an embedding layer. However, in practice this strategy only worsened the performance of the models, and was therefore discarded.
 	
 	\section{Conclusion}
-	Contrary to what I expected, the model that performed the best was the one exploiting the average to encode a sequence of embeddings. It is also showcased we can increase the performance of the aforementioned models just by replacing the concatenation operation with a bilinear layer.
+	Contrary to what I expected, the model that performed the best (fig. \ref{fig:architecture}) was the one exploiting the average to encode a sequence of embeddings. It is also showcased we can increase the performance of the aforementioned models just by replacing the concatenation operation with a bilinear layer.
 	\clearpage
 	\section{Figures and tables}
 	All figures and tables have been intentionally placed at the end of the document, in this section, so that they don't affect the maximum limit of two pages for the text.
@@ -151,7 +151,7 @@
 			LSTM$_4$ = LSTM$_4$ + Bilinear                        & 65.70 (+ 0.6)       \\ \bottomrule  
 		\end{tabular}
 		\caption{Performance gain of the LSTM model, where LSTM refers to the model that uses an LSTM layer to encode the sequence of embeddings. The star operator * indicates the fact that a particular layer is pretrained.}
-		\label{tab:my-table}
+		\label{tab:LSTM-model}
 	\end{table}
 
 	\begin{table}[H]
