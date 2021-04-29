@@ -48,7 +48,7 @@ class Args:
     target_window = None
 
     # model parameters
-    model_type = "BILINEAR"
+    model_type = "BILINEARLSTM"
     use_pretrained_embeddings = True
     use_pos = False
 
@@ -67,9 +67,9 @@ class Args:
         sentence_dropout = 0.3
 
     # LSTM with bilinear Parameters
-    if model_type == "BILSTM":
+    if model_type == "BILINEARLSTM":
         linear_dropout = 0.3
-        sentence_n_hidden = 512
+        sentence_n_hidden = 300
         sentence_num_layers = 2
         sentence_bidirectional = True
         sentence_dropout = 0.3
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     elif args.model_type == "BILINEAR":
         model = BilinearClassifier(vectors_store, args).to(args.device)
     # LSTM with bilinear layer
-    elif args.model_type == "BILSTM":
+    elif args.model_type == "BILINEARLSTM":
         model = LstmBilinearClassifier(vectors_store, args).to(args.device)
 
     # instantiate optimizer

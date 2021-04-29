@@ -77,7 +77,7 @@ class LstmBilinearClassifier(nn.Module):
         )
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(args.linear_dropout)
-        self.middle_layer = nn.Linear(args.sentence_n_hidden, args.sentence_n_hidden)
+        # self.middle_layer = nn.Linear(args.sentence_n_hidden, args.sentence_n_hidden)
         self.final_layer = nn.Linear(args.sentence_n_hidden, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -116,9 +116,9 @@ class LstmBilinearClassifier(nn.Module):
         out = self.activation(out)
         out = self.dropout(out)
 
-        out = self.middle_layer(out)
-        out = self.activation(out)
-        out = self.dropout(out)
+        # out = self.middle_layer(out)
+        # out = self.activation(out)
+        # out = self.dropout(out)
 
         out = self.final_layer(out).squeeze(1)
         out = self.sigmoid(out)
