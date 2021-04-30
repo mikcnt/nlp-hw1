@@ -67,10 +67,12 @@ class LstmBilinearClassifier(nn.Module):
                 else args.pos_n_hidden * 2
             )
 
+            # bilinear layer for pos embedding of sentence1 and of sentence2
             self.pos_bilinear_layer = nn.Bilinear(
                 pos_recurrent_output_size, pos_recurrent_output_size, args.pos_n_hidden
             )
 
+            # bilinear layer for output of bilinear of sentences and output of bilinear of pos
             self.pos_bilinear = nn.Bilinear(
                 args.sentence_n_hidden, args.pos_n_hidden, args.bi_n_hidden
             )

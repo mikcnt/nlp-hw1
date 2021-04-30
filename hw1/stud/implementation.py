@@ -41,7 +41,7 @@ class RandomBaseline(Model):
         self._weights = np.array([option[1] for option in self.options])
         self._weights = self._weights / self._weights.sum()
 
-    def predict(self, sentence_pairs: List[Dict]) -> List[Dict]:
+    def predict(self, sentence_pairs: List[Dict]) -> List[str]:
         return [
             str(np.random.choice(self._options, 1, p=self._weights)[0])
             for x in sentence_pairs
