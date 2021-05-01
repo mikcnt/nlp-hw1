@@ -18,6 +18,7 @@
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{graphicx}
+
 \renewcommand{\UrlFont}{\ttfamily\small}
 \graphicspath{ {./images/} }
 
@@ -118,7 +119,7 @@
 	All figures and tables have been intentionally placed at the end of the document, in this section, so that they don't affect the maximum limit of two pages for the text.
 	\begin{figure}[H]
 		\centering
-		\includegraphics[width=1\columnwidth]{bilinear_model.png}
+		\includegraphics[width=1\columnwidth]{bilinear_model.pdf}
 		\caption{Final model architecture.}
 		\label{fig:architecture}
 	\end{figure}
@@ -182,15 +183,22 @@
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=1\columnwidth]{losses_final.png}
-		\caption{Training and validation loss plot of the final model. This model obviously converges, and the validation loss starts to increase after very few epochs, when the model starts to overfit.}
+		\caption{Training and validation loss plots of the MLP$_3$ (i.e., final variation) model. This model obviously converges after just a few epochs, even though the validation loss strongly increases, suggesting that the model is probably overfitting.}
 		\label{fig:losses_final}
 	\end{figure}
 
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=1\columnwidth]{losses_mlp.png}
-		\caption{Training and validation loss plot of the MLP$_3$ (i.e., last variation) model. This model never converges, which probably means that the concatenation of the sentence's embeddings is not the best way to handle the data.}
+		\caption{Training and validation loss plots of the MLP$_2$ (i.e., second-last variation) model. This model never converges. The only difference between MLP$_2$ and the final model lies in the way the two models handle the embeddings coming from the two sentences. Therefore, we can safely assume that the concatenation operation is the principal issue in this architecture.}
 		\label{fig:losses_mlp}
+	\end{figure}
+
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=1\columnwidth]{accuracies_final.png}
+		\caption{Training and validation accuracy plots of the final model. As we can see, the model reaches its maximum validation accuracy just after two epochs. This again suggests us that the model overfits very quickly.}
+		\label{fig:accuracies_final}
 	\end{figure}
 	
 	\bibliographystyle{acl_natbib}
