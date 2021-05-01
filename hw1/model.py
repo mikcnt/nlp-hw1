@@ -5,6 +5,7 @@ class Model:
     def predict(self, sentence_pairs: List[Dict]) -> List[str]:
         """
         A simple wrapper for your model
+
         Args:
             sentence_pairs: list of dicts of strings. The outer list represents the samples, the inner one a dictionary with sentence pairs and extra information such as the lemma for WiC and the indexes in context in the two sentences.
             within it. Ex: [{
@@ -28,8 +29,10 @@ class Model:
                                 'end1': '52',
                                 'start2': '16',
                                 'end2': '21'} ]
+
         Returns:
             list of predictions associated to each sentence pair.
             Ex: Ex: [ "True", "False" ]
+
         """
         raise NotImplementedError
